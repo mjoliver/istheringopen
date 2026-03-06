@@ -10,9 +10,9 @@ const PROXY_URL = `https://corsproxy.io/?url=${encodeURIComponent(DIRECT_URL)}`;
 const CACHE_KEY = 'nring_track_data';
 
 // Cache TTLs: much shorter when track is open so status changes surface fast
-const TTL_OPEN = 30 * 1000;       // 30 s  — while a session is running
-const TTL_CLOSED = 20 * 60 * 1000;  // 20 min — off-season / no session today
-const TTL_FORCE = 60 * 60 * 1000;  // 60 min — force full refresh regardless
+const TTL_LIVE = 30 * 1000;         // 30 s  — while a session is running
+const TTL_ACTIVE_DAY = 10 * 60 * 1000;    // 10 min — track opens later today
+const TTL_OFF_DAY = 12 * 60 * 60 * 1000; // 12 hours — off-season / no session today
 
 // State
 let trackData = null;
@@ -195,18 +195,28 @@ function tickCountdowns() {
 
 // -------- Polling --------
 
+function isLive(data) {
+    if (!data) return false;
+    return !!(data.nordschleife?.opened || data.ring_kartbahn?.opened);
+}
+
 /** Schedule the next data poll based on whether any track is currently open. */
 function schedulePoll() {
     clearInterval(pollTimer);
+    if (!trackData) return;
+
+    const live = isLive(trackData);
     const t = today();
-    const anyOpen = trackData && (
-        getDayData(trackData.nordschleife, t)?.opened ||
-        getDayData(trackData.ring_kartbahn, t)?.opened
-    );
-    // When open: poll every 30s to catch live closures fast
-    // When closed: poll every 30 minutes (rely on localStorage cache between)
-    const interval = anyOpen ? 30_000 : 30 * 60 * 1000;
-    pollTimer = setInterval(() => loadData(true), interval);
+    const scheduledToday = getDayData(trackData.nordschleife, t)?.opened || getDayData(trackData.ring_kartbahn, t)?.opened;
+
+    // When live: poll every 30s to catch live closures fast
+    // When active day: poll every 10 minutes to catch unexpected early openings
+    // When off-day: no background polling needed, relies on tab visibility logic
+    if (live) {
+        pollTimer = setInterval(() => loadData(true), TTL_LIVE);
+    } else if (scheduledToday) {
+        pollTimer = setInterval(() => loadData(true), TTL_ACTIVE_DAY);
+    }
 }
 
 // -------- Render --------
@@ -456,12 +466,15 @@ async function loadData(force = false) {
     const cached = readCache();
     const t = today();
 
-    // Determine whether any session is active right now (to pick TTL)
-    const anyOpen = cached?.data && (
+    // Determine the appropriate cache TTL
+    const live = cached?.data && (cached.data.nordschleife?.opened || cached.data.ring_kartbahn?.opened);
+    const scheduledToday = cached?.data && (
         getDayData(cached.data.nordschleife, t)?.opened ||
         getDayData(cached.data.ring_kartbahn, t)?.opened
     );
-    const ttl = anyOpen ? TTL_OPEN : TTL_CLOSED;
+    let ttl = TTL_OFF_DAY;
+    if (live) ttl = TTL_LIVE;
+    else if (scheduledToday) ttl = TTL_ACTIVE_DAY;
 
     if (cached && !force) {
         applyData(cached.data, cached.fetchedAt);
@@ -469,7 +482,8 @@ async function loadData(force = false) {
             // Background refresh
             fetchFresh().then(fresh => {
                 if (fresh) applyData(fresh.data, fresh.fetchedAt);
-                else if (cached.age > TTL_FORCE) showError(true);
+                // On off-days, allow stale data indefinitely instead of forcing an error
+                else if (cached.age > TTL_OFF_DAY) showError(true);
             });
         }
         return;

@@ -13,14 +13,15 @@ const https = require('https');
 const http = require('http');
 
 const UPSTREAM = 'https://nuerburgring.de/track_status';
-const TTL_OPEN = 30 * 1000;
-const TTL_CLOSED = 20 * 60 * 1000;
+const TTL_LIVE = 30 * 1000;
+const TTL_ACTIVE_DAY = 10 * 60 * 1000;
+const TTL_OFF_DAY = 12 * 60 * 60 * 1000;
 const PORT = process.env.PORT || 8080;
 
 // In-memory cache — fine for a single-endpoint proxy.
 // Multiple Cloud Run instances each get their own cache;
 // worst case nuerburgring.de sees (instances × 1) req/TTL, not (users × 1).
-let cache = { data: null, fetchedAt: 0, ttl: TTL_CLOSED };
+let cache = { data: null, fetchedAt: 0, ttl: TTL_OFF_DAY };
 
 function isOpen(data) {
     try {
@@ -48,6 +49,29 @@ function fetchUpstream() {
             });
         }).on('error', reject);
     });
+}
+
+function getTtl(data) {
+    if (isOpen(data)) return TTL_LIVE;
+
+    try {
+        // Evaluate "today" in Europe/Berlin time
+        const tzDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+        const todayStr = `${tzDate.getFullYear()}-${String(tzDate.getMonth() + 1).padStart(2, '0')}-${String(tzDate.getDate()).padStart(2, '0')}`;
+
+        const tracks = Object.values(data);
+        const scheduledToday = tracks.some(t => {
+            const raw = t?.year_schedule?.[todayStr];
+            if (!raw) return false;
+            return (raw.exclusion || raw).opened === true;
+        });
+
+        if (scheduledToday) return TTL_ACTIVE_DAY;
+    } catch (e) {
+        // Fallback silently
+    }
+
+    return TTL_OFF_DAY;
 }
 
 const CORS_HEADERS = {
@@ -92,7 +116,7 @@ const server = http.createServer(async (req, res) => {
     // Cache miss or stale — fetch upstream
     try {
         const data = await fetchUpstream();
-        const ttl = isOpen(data) ? TTL_OPEN : TTL_CLOSED;
+        const ttl = getTtl(data);
         cache = { data, fetchedAt: Date.now(), ttl };
 
         res.writeHead(200, {

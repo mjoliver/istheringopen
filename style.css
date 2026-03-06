@@ -1099,7 +1099,8 @@ nav a {
 
   /* tiny phones: collapsed nav */
   .last-updated {
-    display: none;
+    margin-left: auto;
+    font-size: 0.65rem;
   }
 
   /* show in hero-sub instead */

@@ -74,7 +74,7 @@ These were deliberate tradeoffs to minimise payload and rendering cost for phone
 
 | Removed | Replaced with | Reason |
 |---|---|---|
-| Google Fonts CDN | System font stack | Saves ~300ms DNS + download on first load |
+| Google Fonts CDN (full) | DM Sans subset via preconnect + `font-display:swap` | No render blocking; text shows instantly in system fallback then swaps. ~20KB, 1yr browser cache. |
 | `backdrop-filter` | Plain dark backgrounds | GPU-intensive, causes jank on mid-range phones |
 | Hero full-screen section | Compact 56px banner | Status cards visible immediately without scrolling |
 | Animations (unconditional) | `prefers-reduced-motion` gate | Respects accessibility, saves repaints |
@@ -141,11 +141,16 @@ Without a proxy, each user's browser hits `nuerburgring.de/track_status` directl
 
 ---
 
-## What's still TODO
+## Status
 
-- [ ] Write the Cloud Run proxy service (`proxy/index.js`)
-- [ ] Write `Dockerfile` for the proxy
-- [ ] Write `firebase.json` deploy config
-- [ ] Update `app.js` `API_URL` to point at the Cloud Run URL
-- [ ] Deploy and verify Service Worker activates on HTTPS
-- [ ] Set up custom domain
+### Completed
+- [x] Cloud Run proxy (`proxy/index.js` + `Dockerfile`)
+- [x] Firebase Hosting config (`firebase.json`)
+- [x] `app.js` `API_URL` pointing at Cloud Run proxy (with CORS headers)
+- [x] GitHub Actions CI/CD (auto-deploy on push to `main`)
+- [x] Domain purchased: `istheringopen.com`
+
+### Remaining
+- [ ] **Custom domain** — connect `istheringopen.com` in Firebase console, add DNS records in Cloudflare
+- [ ] **Verify Service Worker** — check it activates and shows in DevTools Application tab once HTTPS is confirmed
+- [ ] **Billing alert** — set $5/month alert in GCP console (see DEPLOY.md)

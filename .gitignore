@@ -1,0 +1,21 @@
+# Private infrastructure docs
+DECISIONS.md
+DEPLOY.md
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+.firebaserc.backup
+
+# Node (proxy dependencies if added later)
+node_modules/
+proxy/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp

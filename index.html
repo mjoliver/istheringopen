@@ -23,13 +23,6 @@
     <meta name="apple-mobile-web-app-title" content="Ring Open?">
     <meta name="mobile-web-app-capable" content="yes">
 
-    <!-- DM Sans — closest public equivalent to Google Sans, served with swap so -->
-    <!-- text renders immediately and zero DNS blocking on the critical path       -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap"
-        rel="stylesheet">
 
     <!-- Preload the stylesheet so it doesn't block render any longer than necessary -->
     <link rel="preload" href="style.css" as="style">
@@ -224,7 +217,20 @@
                     </li>
                 </ul>
             </div>
-            <p class="disclaimer">⚠️ Data comes from the official Nürburgring API. The track can close at any time
+            <div
+                style="margin-top:12px; padding:16px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border);">
+                <h4
+                    style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px; color:var(--text);">
+                    ⚡ Optimised for the Track</h4>
+                <ul style="font-size:0.85rem; color:var(--muted); padding-left:20px; line-height:1.8;">
+                    <li>~20 KB total — entire app shell, first load, on the wire</li>
+                    <li>Zero external requests — no third-party fonts, trackers, or CDN calls</li>
+                    <li>Cached on your device after first visit — reloads instantly, works offline</li>
+                    <li>Single upstream API call shared across all users via server-side cache</li>
+                </ul>
+            </div>
+            <p class="disclaimer" style="margin-top:12px;">⚠️ Data comes from the official Nürburgring API. The track
+                can close at any time
                 due to weather or incidents — always confirm before making a long drive.</p>
         </div>
 
@@ -261,7 +267,7 @@
         <div style="text-align:center;">
             <p>Data sourced from <a href="https://nuerburgring.de/track_status" target="_blank"
                     rel="noopener">nuerburgring.de</a> · Built with ❤️ for motorsport fans</p>
-            <p style="margin-top:8px; opacity:0.4; font-size:0.65rem;">v1.2.7 (CI/CD Pipeline Test)</p>
+            <p style="margin-top:8px; opacity:0.4; font-size:0.65rem;">v1.3.0</p>
         </div>
     </div>
 </footer>

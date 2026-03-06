@@ -1,4 +1,4 @@
-# istheringopen.com (?) 🏁🏎️
+# istheringopen.com 🏁🏎️
 
 [![Live Site](https://img.shields.io/badge/Live-istheringopen.com-red.svg)](https://istheringopen.com)
 [![Firebase Deploy](https://github.com/mjoliver/istheringopen/actions/workflows/firebase-hosting-merge.yml/badge.svg)](https://github.com/mjoliver/istheringopen/actions/workflows/firebase-hosting-merge.yml)
@@ -21,6 +21,7 @@ This app answers that single question instantly.
 - **Trackside Alerts**: Enable the notification bell to get a "pocket ping" the split-second the track flips from Closed to Open. Works in the background while you wait in the car.
 - **Season Calendar Sync**: One-click export of the entire 12-month schedule to your Google/Apple calendar, including opening hours and events.
 - **Adaptive Caching**: Background polling automatically adjusts based on track schedules (every 30s when live, every 10m on active days, and paused completely off-season).
+- **Optimised for congested networks**: ~20 KB total on the wire. Zero external requests — no third-party fonts, trackers, or CDN calls. Single upstream API call shared across all users.
 - **No bloat**: Pure HTML, CSS, and JS. No massive frameworks, no ads, no trackers. *Just the answer.*
 
 ## Architecture

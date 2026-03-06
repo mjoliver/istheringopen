@@ -1,6 +1,7 @@
 # Private infrastructure docs
 DECISIONS.md
 DEPLOY.md
+webcam_page.html
 
 # Firebase
 .firebase/

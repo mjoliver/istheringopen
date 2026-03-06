@@ -7,7 +7,8 @@
             "**/.*",
             "proxy/**",
             "DECISIONS.md",
-            "DEPLOY.md"
+            "DEPLOY.md",
+            "webcam_page.html"
         ],
         "rewrites": [
             {

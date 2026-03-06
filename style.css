@@ -1098,16 +1098,27 @@ nav a {
   }
 
   /* tiny phones: collapsed nav */
+  .hero-banner-inner {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
   .last-updated {
     margin-left: auto;
-    font-size: 0.65rem;
-    white-space: normal;
+    font-size: 0.62rem;
+    white-space: nowrap;
     text-align: right;
-    line-height: 1.2;
   }
 
   .logo-text {
-    font-size: 1rem;
+    font-size: 0.95rem;
+  }
+
+  .logo-ring {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    margin: 0 2px;
   }
 
   /* show in hero-sub instead */

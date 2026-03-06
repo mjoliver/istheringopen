@@ -161,7 +161,9 @@ const server = http.createServer(async (req, res) => {
             'X-Cache': 'HIT',
             'X-Cache-Age': `${age}s`,
         });
-        res.end(JSON.stringify(cache.data));
+        // Inject timestamp and TTL into data
+        const outData = { ...cache.data, _proxyFetchedAt: cache.fetchedAt, _proxyTtl: cache.ttl };
+        res.end(JSON.stringify(outData));
         return;
     }
 
@@ -177,7 +179,9 @@ const server = http.createServer(async (req, res) => {
             'Cache-Control': `public, max-age=${Math.round(ttl / 1000)}`,
             'X-Cache': 'MISS',
         });
-        res.end(JSON.stringify(data));
+        // Inject timestamp and TTL into data
+        const outData = { ...data, _proxyFetchedAt: cache.fetchedAt, _proxyTtl: ttl };
+        res.end(JSON.stringify(outData));
     } catch (err) {
         console.error('Upstream fetch failed:', err.message);
         if (cache.data) {

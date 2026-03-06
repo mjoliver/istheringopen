@@ -22,6 +22,8 @@ let currentCalMonth = null;
 let countdownTimer = null;
 let showFullUpcoming = false;
 let pollTimer = null;
+let uiTimer = null;
+let lastFetchedAt = 0;
 let webcamTimer = null;
 let webcamsLoaded = false;
 let notificationsEnabled = localStorage.getItem('nring_notifications') === 'true';
@@ -173,9 +175,9 @@ function readCache() {
     } catch { return null; }
 }
 
-function writeCache(data) {
+function writeCache(data, fetchedAt) {
     try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ data, fetchedAt: Date.now() }));
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data, fetchedAt }));
     } catch { }
 }
 
@@ -296,7 +298,6 @@ function tickCountdowns() {
 // -------- Polling --------
 
 let nextPollTime = null;
-let uiTimer = null;
 
 function updateRefreshUI() {
     const el = document.getElementById('refresh-text');
@@ -313,26 +314,28 @@ function updateRefreshUI() {
         return;
     }
 
-    let timeStr = '';
+    let refreshStr = '';
     if (diff > 3600) {
-        timeStr = `${Math.ceil(diff / 3600)}h`;
+        refreshStr = `${Math.ceil(diff / 3600)}h`;
     } else if (diff > 60) {
-        timeStr = `${Math.ceil(diff / 60)}m`;
+        refreshStr = `${Math.ceil(diff / 60)}m`;
     } else {
-        timeStr = `${diff}s`;
+        refreshStr = `${diff}s`;
     }
+
+    const ageMs = Date.now() - lastFetchedAt;
+    const ageStr = lastFetchedAt ? formatAge(ageMs) : '...';
 
     const t = today();
     const scheduledToday = trackData && (getDayData(trackData.nordschleife, t)?.opened || getDayData(trackData.ring_kartbahn, t)?.opened);
     const isLiveNow = isLive(trackData);
 
-    if (isLiveNow) {
-        el.textContent = ` • Updating in ${timeStr} (Live frequency)`;
-    } else if (scheduledToday) {
-        el.textContent = ` • Updating in ${timeStr} (Scheduled today)`;
-    } else {
-        el.textContent = ` • Updating in ${timeStr} (Standby mode)`;
-    }
+    let mode;
+    if (isLiveNow) mode = 'Live';
+    else if (scheduledToday) mode = 'Scheduled today';
+    else mode = 'Standby';
+
+    el.textContent = `Data ${ageStr} \u2022 Next check in ${refreshStr} (${mode})`;
 }
 
 // -------- Trackside Alerts (Notifications) --------
@@ -429,17 +432,25 @@ function schedulePoll(fetchedAt = Date.now()) {
     const t = today();
     const scheduledToday = getDayData(trackData.nordschleife, t)?.opened || getDayData(trackData.ring_kartbahn, t)?.opened;
 
-    let interval = TTL_OFF_DAY;
-    if (live) interval = TTL_LIVE;
-    else if (scheduledToday) interval = TTL_ACTIVE_DAY;
-    else {
-        const days = getMinDaysUntilOpen(trackData);
-        if (days === 1) interval = TTL_OFF_NEAR;
-        else if (days <= 7) interval = TTL_OFF_MID;
+    let interval = trackData._proxyTtl || TTL_OFF_DAY;
+
+    // Fallback logic if _proxyTtl isn't present for some reason
+    if (!trackData._proxyTtl) {
+        if (live) interval = TTL_LIVE;
+        else if (scheduledToday) interval = TTL_ACTIVE_DAY;
+        else {
+            const days = getMinDaysUntilOpen(trackData);
+            if (days === 1) interval = TTL_OFF_NEAR;
+            else if (days <= 7) interval = TTL_OFF_MID;
+        }
     }
 
     // Set the expected next poll time relative to when the data was actually fetched
     nextPollTime = fetchedAt + interval;
+
+    // If the proxy gave us a TTL but the data is ALREADY older than that TTL
+    // (e.g. we just loaded the page and got a stale cache hit),
+    // we want to poll immediately, not wait a full TTL cycle.
     const msUntilNext = Math.max(0, nextPollTime - Date.now());
 
     pollTimer = setTimeout(() => {
@@ -460,15 +471,8 @@ function renderStatus(data, fetchedAt) {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
-    const age = Date.now() - fetchedAt;
-    const isCached = age > 5000;
-    const statusEl = document.getElementById('last-updated');
-    const badgeHtml = isCached
-        ? `<span class="cache-badge">📦 Cached</span> ${formatAge(age)}`
-        : `<span class="cache-badge live">🟢 Live</span> ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (Browser Time)`;
-
     const infoPopupHtml = `
-        <div class="cache-info-container">
+        <div class="cache-info-container" style="display:inline-block; margin-left:6px; vertical-align:middle;">
             <div class="info-btn" onclick="toggleCacheInfo()">i</div>
             <div class="cache-info-popup" id="cache-info-popup">
                 <h4>🔋 Smart Data Refresh</h4>
@@ -484,7 +488,16 @@ function renderStatus(data, fetchedAt) {
         </div>
     `;
 
-    statusEl.innerHTML = `${badgeHtml}<span id="refresh-text" style="opacity:0.8; margin-left:4px;"></span>${infoPopupHtml}`;
+    // Render a static badge — 'refresh-text' span ticks every second with timing details
+    const age = lastFetchedAt ? Date.now() - lastFetchedAt : 0;
+    const isCached = age > 5000;
+    const fetchTime = new Date();
+    const badgeHtml = isCached
+        ? `<span class="cache-badge">📦 Cached</span>`
+        : `<span class="cache-badge live">🟢 Live</span> ${fetchTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (Browser Time)`;
+
+    const statusEl = document.getElementById('last-updated');
+    statusEl.innerHTML = `${badgeHtml} <span id="refresh-text" style="opacity:0.8;"></span>${infoPopupHtml}`;
     if (typeof updateRefreshUI === 'function') updateRefreshUI();
 
     renderTrackStatus('nordschleife', data.nordschleife, t);
@@ -774,8 +787,14 @@ async function fetchFresh() {
             const res = await fetch(url, { headers: { Accept: 'application/json' } });
             if (!res.ok) continue;
             const data = await res.json();
-            writeCache(data);
-            return { data, fetchedAt: Date.now() };
+
+            // Prefer the proxy's server-side timestamp to show absolute data age.
+            // Fall back to existing lastFetchedAt so a background refresh doesn't
+            // silently reset the countdown to 60m when the proxy data hasn't changed.
+            const fetchedAt = data._proxyFetchedAt || lastFetchedAt || Date.now();
+
+            writeCache(data, fetchedAt);
+            return { data, fetchedAt };
         } catch { }
     }
     return null;
@@ -784,6 +803,7 @@ async function fetchFresh() {
 function applyData(data, fetchedAt) {
     checkStatusChange(data);
     trackData = data;
+    lastFetchedAt = fetchedAt;
     renderStatus(data, fetchedAt);
     renderUpcoming();   // no tab argument — all circuits
     const d = new Date();
@@ -803,15 +823,24 @@ async function loadData(force = false) {
     const cached = readCache();
     const t = today();
 
-    // Determine the appropriate cache TTL
-    const live = cached?.data && (cached.data.nordschleife?.opened || cached.data.ring_kartbahn?.opened);
-    const scheduledToday = cached?.data && (
-        getDayData(cached.data.nordschleife, t)?.opened ||
-        getDayData(cached.data.ring_kartbahn, t)?.opened
-    );
-    let ttl = TTL_OFF_DAY;
-    if (live) ttl = TTL_LIVE;
-    else if (scheduledToday) ttl = TTL_ACTIVE_DAY;
+    let ttl = cached?.data?._proxyTtl;
+
+    // Fallback if _proxyTtl isn't present
+    if (!ttl) {
+        const live = cached?.data && (cached.data.nordschleife?.opened || cached.data.ring_kartbahn?.opened);
+        const scheduledToday = cached?.data && (
+            getDayData(cached.data.nordschleife, t)?.opened ||
+            getDayData(cached.data.ring_kartbahn, t)?.opened
+        );
+        ttl = TTL_OFF_DAY;
+        if (live) ttl = TTL_LIVE;
+        else if (scheduledToday) ttl = TTL_ACTIVE_DAY;
+        else {
+            const days = getMinDaysUntilOpen(cached?.data);
+            if (days === 1) ttl = TTL_OFF_NEAR;
+            else if (days <= 7) ttl = TTL_OFF_MID;
+        }
+    }
 
     if (cached && !force) {
         applyData(cached.data, cached.fetchedAt);

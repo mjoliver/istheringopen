@@ -34,8 +34,8 @@
 <header class="hero-banner">
     <div class="hero-banner-inner">
         <div class="logo">
+            <span class="logo-text">istheringopen.com</span>
             <span class="logo-ring">?</span>
-            <span class="logo-text">IsTheRingOpen</span>
         </div>
         <nav class="nav">
             <a href="#status" class="nav-link active">Status</a>
@@ -43,7 +43,9 @@
             <a href="#calendar" class="nav-link">Calendar</a>
             <a href="#about" class="nav-link">About</a>
         </nav>
-        <div class="last-updated" id="last-updated">Loading…</div>
+        <div class="last-updated" id="last-updated-row">
+            <span id="last-updated">Loading…</span>
+        </div>
     </div>
     <div class="hero-sub">
         <span class="hero-eyebrow">Nürburgring &nbsp;·&nbsp; Live Track Status</span>
@@ -55,7 +57,13 @@
 <section class="section" id="status">
     <div class="container">
         <h2 class="section-title">Track Status <span class="live-dot-wrap"><span class="live-dot"
-                    id="live-dot"></span></span></h2>
+                    id="live-dot"></span></span>
+            <button id="notify-btn" class="btn-notify" onclick="toggleNotifications()" title="Notify when Open"
+                style="display:none; margin-left:12px; vertical-align:middle;">
+                <span class="icon">🔔</span>
+                <span id="notify-label">Notify Me</span>
+            </button>
+        </h2>
         <p class="section-subtitle" id="status-date">Today</p>
 
         <div class="status-grid">
@@ -133,8 +141,14 @@
 <!-- Upcoming Schedule -->
 <section class="section section-alt" id="schedule">
     <div class="container">
-        <h2 class="section-title">Upcoming Open Days</h2>
-        <p class="section-subtitle">Next 30 days &mdash; all circuits combined</p>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px;">
+            <h2 class="section-title" style="margin-bottom:0">Upcoming Open Days</h2>
+            <button id="sync-cal-btn" class="btn-text" onclick="exportFullCalendar()" style="display:none;">
+                <span class="icon">🗓️</span>
+                <span class="btn-text-label">Sync <span id="sync-cal-year"></span> Schedule</span>
+            </button>
+        </div>
+        <p class="section-subtitle" id="upcoming-subtitle">Next 10 days &mdash; all circuits combined</p>
 
         <div class="upcoming-list" id="upcoming-list">
             <div class="loading-spinner">
@@ -233,10 +247,16 @@
 </section>
 
 <footer class="footer">
-    <div class="container">
-        <p>Data sourced from <a href="https://nuerburgring.de/track_status" target="_blank"
-                rel="noopener">nuerburgring.de</a> · Built with ❤️ for motorsport fans</p>
-        <p style="margin-top:8px; opacity:0.4; font-size:0.65rem;">v1.2.6 (April-Ready Patch)</p>
+    <div class="container" style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <div class="logo" style="margin:0 auto; justify-content:center;">
+            <span class="logo-text">istheringopen.com</span>
+            <span class="logo-ring">?</span>
+        </div>
+        <div style="text-align:center;">
+            <p>Data sourced from <a href="https://nuerburgring.de/track_status" target="_blank"
+                    rel="noopener">nuerburgring.de</a> · Built with ❤️ for motorsport fans</p>
+            <p style="margin-top:8px; opacity:0.4; font-size:0.65rem;">v1.2.6 (April-Ready Patch)</p>
+        </div>
     </div>
 </footer>
 

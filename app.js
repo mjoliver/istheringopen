@@ -19,9 +19,11 @@ let trackData = null;
 let currentCalMonth = null;
 let countdownTimer = null;
 let showFullUpcoming = false;
-let pollTimer = null;   // setInterval handle for data refresh
-let webcamTimer = null;   // setInterval handle for webcam refresh
+let pollTimer = null;
+let webcamTimer = null;
 let webcamsLoaded = false;
+let notificationsEnabled = localStorage.getItem('nring_notifications') === 'true';
+let lastStatusOpen = null;
 
 // Human-readable names for known track keys (fallback: prettify key)
 const TRACK_META = {
@@ -308,6 +310,79 @@ function updateRefreshUI() {
     }
 }
 
+// -------- Trackside Alerts (Notifications) --------
+
+async function toggleNotifications() {
+    // 1. If we are turning them OFF, just do it. No permission check needed.
+    if (notificationsEnabled) {
+        notificationsEnabled = false;
+        localStorage.setItem('nring_notifications', 'false');
+        updateNotifyUI();
+        return;
+    }
+
+    // 2. If we are turning them ON, check browser support and permissions.
+    if (!("Notification" in window)) {
+        alert("This browser does not support desktop notifications");
+        return;
+    }
+
+    if (Notification.permission === "denied") {
+        alert("Notifications are blocked in your browser settings. Please enable them to receive alerts.");
+        return;
+    }
+
+    if (Notification.permission !== "granted") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return;
+    }
+
+    // 3. Enable alerts
+    notificationsEnabled = true;
+    localStorage.setItem('nring_notifications', 'true');
+    updateNotifyUI();
+
+    if (notificationsEnabled) {
+        new Notification("🔔 Trackside Alerts Active", {
+            body: "We'll ping your pocket the second the barriers lift!",
+            icon: '/manifest.json' // manifest icons are local
+        });
+    }
+}
+
+function updateNotifyUI() {
+    const btn = document.getElementById('notify-btn');
+    const label = document.getElementById('notify-label');
+    if (!btn || !label) return;
+
+    if (!("Notification" in window)) {
+        btn.style.display = 'none';
+        return;
+    }
+
+    btn.style.display = 'inline-flex';
+    btn.classList.toggle('active', notificationsEnabled);
+    label.textContent = notificationsEnabled ? 'Alerts Active' : 'Notify Me';
+    btn.querySelector('.icon').textContent = notificationsEnabled ? '🔕' : '🔔';
+}
+
+function checkStatusChange(data) {
+    if (!notificationsEnabled || !data) return;
+
+    const currentlyOpen = isLive(data);
+
+    // If it flipped from Closed -> Open
+    if (currentlyOpen && lastStatusOpen === false) {
+        new Notification("🏁 TRACK IS OPEN!", {
+            body: "The cleanup is done. Get out there for a clear lap!",
+            vibrate: [200, 100, 200],
+            requireInteraction: true
+        });
+    }
+
+    lastStatusOpen = currentlyOpen;
+}
+
 function toggleCacheInfo() {
     const popup = document.getElementById('cache-info-popup');
     if (popup) popup.classList.toggle('active');
@@ -457,6 +532,16 @@ function renderUpcoming() {
         }
     }
 
+    // Dynamic year detection for the sync button
+    const firstDate = Object.keys(byDate).sort()[0] || today();
+    const dataYear = firstDate.split('-')[0];
+    const syncBtn = document.getElementById('sync-cal-btn');
+    const syncYear = document.getElementById('sync-cal-year');
+    if (syncBtn && syncYear) {
+        syncYear.textContent = dataYear;
+        syncBtn.style.display = 'inline-flex';
+    }
+
     const dates = Object.keys(byDate).sort();
     const subEl = document.getElementById('upcoming-subtitle');
     if (subEl) {
@@ -505,6 +590,67 @@ function renderUpcoming() {
     ` : '';
 
     list.innerHTML = scheduleHtml + toggleBtn;
+}
+
+// -------- Full Year Calendar Sync (.ics) --------
+
+function exportFullCalendar() {
+    if (!trackData) return;
+
+    const trackKeys = Object.keys(trackData).filter(k => trackData[k]?.year_schedule);
+    let icsLines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//IsTheRingOpen//Nürburgring Schedule//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'X-WR-CALNAME:Nürburgring Tourist Drives'
+    ];
+
+    const todayStr = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    for (const key of trackKeys) {
+        const sched = trackData[key].year_schedule || {};
+        for (const dateStr of Object.keys(sched).sort()) {
+            const info = getDayData(trackData[key], dateStr);
+            if (!info?.opened) continue;
+
+            const label = trackLabel(key);
+            const msg = info.message?.en || '';
+
+            for (const p of info.periods) {
+                // Formatting: YYYYMMDDTHHMMSS
+                const dateClean = dateStr.replace(/-/g, '');
+                const start = dateClean + 'T' + p.start.replace(':', '') + '00';
+                const end = dateClean + 'T' + p.end.replace(':', '') + '00';
+                const uid = `${dateClean}-${key}-${p.start.replace(':', '')}@istheringopen.com`;
+
+                icsLines.push('BEGIN:VEVENT');
+                icsLines.push(`UID:${uid}`);
+                icsLines.push(`DTSTAMP:${todayStr}`);
+                icsLines.push(`DTSTART;TZID=Europe/Berlin:${start}`);
+                icsLines.push(`DTEND;TZID=Europe/Berlin:${end}`);
+                icsLines.push(`SUMMARY:${label} Open${msg ? ' (' + msg + ')' : ''}`);
+                icsLines.push(`DESCRIPTION:Nürburgring Tourist Drives - ${label}${msg ? '\\nEvent: ' + msg : ''}`);
+                icsLines.push('LOCATION:Nürburgring, Germany');
+                icsLines.push('END:VEVENT');
+            }
+        }
+    }
+
+    icsLines.push('END:VCALENDAR');
+
+    // Dynamic filename based on schedule year
+    const firstDate = Object.keys(trackData[trackKeys[0]]?.year_schedule || {}).sort()[0] || '2026';
+    const dataYear = firstDate.split('-')[0];
+
+    const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `nürburgring-schedule-${dataYear}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 // -------- Calendar (all circuits) --------
@@ -604,6 +750,7 @@ async function fetchFresh() {
 }
 
 function applyData(data, fetchedAt) {
+    checkStatusChange(data);
     trackData = data;
     renderStatus(data, fetchedAt);
     renderUpcoming();   // no tab argument — all circuits
@@ -691,3 +838,4 @@ document.addEventListener('mousedown', e => {
 loadData();
 schedulePoll();
 initWebcams();
+updateNotifyUI();

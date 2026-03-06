@@ -127,6 +127,83 @@ a {
   transform: translateY(0);
 }
 
+.btn-notify {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1;
+}
+
+.btn-notify:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--muted);
+  color: var(--text);
+  transform: scale(1.02);
+}
+
+.btn-notify.active {
+  color: var(--amber);
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.1);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+}
+
+.btn-notify .icon {
+  font-size: 0.95rem;
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--muted);
+}
+
+.btn-icon.active {
+  color: var(--amber);
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.1);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  transition: all 0.2s;
+  outline: none;
+  line-height: 1;
+}
+
+.btn-text:hover {
+  filter: brightness(1.2);
+}
+
+.btn-text:hover .btn-text-label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.btn-text-label {
+  white-space: nowrap;
+}
+
 /* Larger tap targets on touch devices */
 button,
 a {

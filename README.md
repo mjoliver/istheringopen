@@ -1,4 +1,4 @@
-# Is The Ring Open? 🏁🏎️
+# istheringopen.com (?) 🏁🏎️
 
 [![Live Site](https://img.shields.io/badge/Live-istheringopen.com-red.svg)](https://istheringopen.com)
 [![Firebase Deploy](https://github.com/mjoliver/istheringopen/actions/workflows/firebase-hosting-merge.yml/badge.svg)](https://github.com/mjoliver/istheringopen/actions/workflows/firebase-hosting-merge.yml)
@@ -18,7 +18,8 @@ When the track is closed for a cleanup, it's a guessing game. You're sat with on
 This app answers that single question instantly. 
 
 - **Instant Load**: The entire app shell is cached locally on your device via a Service Worker.
-- **Micro-Payloads**: It fetches live data straight from a highly-optimised edge proxy, returning only bytes of data.
+- **Trackside Alerts**: Enable the notification bell to get a "pocket ping" the split-second the track flips from Closed to Open. Works in the background while you wait in the car.
+- **Season Calendar Sync**: One-click export of the entire 12-month schedule to your Google/Apple calendar, including opening hours and events.
 - **Adaptive Caching**: Background polling automatically adjusts based on track schedules (every 30s when live, every 10m on active days, and paused completely off-season).
 - **No bloat**: Pure HTML, CSS, and JS. No massive frameworks, no ads, no trackers. *Just the answer.*
 

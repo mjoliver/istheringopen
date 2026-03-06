@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- viewport: touch-action optimisation, no 300ms tap delay -->
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#e30613">
+    <title>Is The Ring Open?</title>
+    <meta name="description"
+        content="Live open/closed status, session hours, and upcoming schedule for the Nürburgring Nordschleife and Grand Prix circuit. Free community resource.">
+
+    <!-- PWA / iOS home-screen -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ring Open?">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- DM Sans — closest public equivalent to Google Sans, served with swap so -->
+    <!-- text renders immediately and zero DNS blocking on the critical path       -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap"
+        rel="stylesheet">
+
+    <!-- Preload the stylesheet so it doesn't block render any longer than necessary -->
+    <link rel="preload" href="style.css" as="style">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<!-- Compact hero banner — full-page hero removed to put status front-and-centre on mobile -->
+<header class="hero-banner">
+    <div class="hero-banner-inner">
+        <div class="logo">
+            <span class="logo-ring">?</span>
+            <span class="logo-text">IsTheRingOpen</span>
+        </div>
+        <nav class="nav">
+            <a href="#status" class="nav-link active">Status</a>
+            <a href="#schedule" class="nav-link">Schedule</a>
+            <a href="#calendar" class="nav-link">Calendar</a>
+            <a href="#about" class="nav-link">About</a>
+        </nav>
+        <div class="last-updated" id="last-updated">Loading…</div>
+    </div>
+    <div class="hero-sub">
+        <span class="hero-eyebrow">Nürburgring &nbsp;·&nbsp; Live Track Status</span>
+        <p class="hero-subtitle">Nordschleife &amp; Grand Prix Circuit &nbsp;·&nbsp; Tourist Drives</p>
+    </div>
+</header>
+
+<!-- Live Status Cards -->
+<section class="section" id="status">
+    <div class="container">
+        <h2 class="section-title">Track Status <span class="live-dot-wrap"><span class="live-dot"
+                    id="live-dot"></span></span></h2>
+        <p class="section-subtitle" id="status-date">Today</p>
+
+        <div class="status-grid">
+            <!-- Nordschleife -->
+            <div class="status-card" id="card-nordschleife">
+                <div class="status-card-header">
+                    <div class="track-icon">🏁</div>
+                    <div class="track-info">
+                        <h3 class="track-name">Nordschleife</h3>
+                        <p class="track-meta">20.832 km · Tourist Drives</p>
+                    </div>
+                    <div class="status-badge" id="badge-nordschleife">
+                        <span class="badge-dot"></span>
+                        <span class="badge-text">Checking…</span>
+                    </div>
+                </div>
+                <div class="status-card-body">
+                    <div class="hours-block" id="hours-nordschleife">
+                        <div class="hours-skeleton"></div>
+                    </div>
+                    <div class="event-tag" id="event-nordschleife"></div>
+                </div>
+                <div class="status-card-footer">
+                    <div class="next-open" id="next-nordschleife"></div>
+                    <div class="countdown" id="countdown-nordschleife"></div>
+                </div>
+            </div>
+
+            <!-- GP / Ring Kartbahn -->
+            <div class="status-card" id="card-gp">
+                <div class="status-card-header">
+                    <div class="track-icon">🏎️</div>
+                    <div class="track-info">
+                        <h3 class="track-name">Grand Prix Circuit</h3>
+                        <p class="track-meta">5.148 km · Sprint Track</p>
+                    </div>
+                    <div class="status-badge" id="badge-gp">
+                        <span class="badge-dot"></span>
+                        <span class="badge-text">Checking…</span>
+                    </div>
+                </div>
+                <div class="status-card-body">
+                    <div class="hours-block" id="hours-gp">
+                        <div class="hours-skeleton"></div>
+                    </div>
+                    <div class="event-tag" id="event-gp"></div>
+                </div>
+                <div class="status-card-footer">
+                    <div class="next-open" id="next-gp"></div>
+                    <div class="countdown" id="countdown-gp"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Webcam Section (opt-in, no images loaded by default) -->
+<section class="section section-alt" id="webcams">
+    <div class="container">
+        <h2 class="section-title">Live Track Views</h2>
+        <p class="section-subtitle" style="margin-bottom:16px">Official snapshots from 4 cameras around the circuit —
+            good for checking queue length and conditions before heading out. Breidscheid, Adenauer Forst, the
+            Nordschleife entry, and the GP start line.</p>
+        <div class="webcam-controls">
+            <button class="tab-btn" id="webcam-btn" onclick="toggleWebcams(this)">
+                Show Cameras
+            </button>
+            <span class="webcam-warning">⚠️ Loads ~400 KB of images</span>
+        </div>
+        <div class="webcam-grid" id="webcam-grid">
+            <!-- Images injected by JS only after opt-in -->
+        </div>
+    </div>
+</section>
+
+<!-- Upcoming Schedule -->
+<section class="section section-alt" id="schedule">
+    <div class="container">
+        <h2 class="section-title">Upcoming Open Days</h2>
+        <p class="section-subtitle">Next 30 days &mdash; all circuits combined</p>
+
+        <div class="upcoming-list" id="upcoming-list">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Loading schedule…</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Calendar View -->
+<section class="section" id="calendar">
+    <div class="container">
+        <h2 class="section-title">Monthly Calendar</h2>
+        <p class="section-subtitle">Open day availability &mdash; all circuits</p>
+
+        <div class="calendar-nav">
+            <button class="cal-nav-btn" id="cal-prev" onclick="changeMonth(-1)">‹</button>
+            <span class="cal-month-label" id="cal-month-label">Loading…</span>
+            <button class="cal-nav-btn" id="cal-next" onclick="changeMonth(1)">›</button>
+        </div>
+
+        <div class="calendar-legend">
+            <span class="legend-item"><span class="legend-dot open"></span> Open</span>
+            <span class="legend-item"><span class="legend-dot event"></span> Special Event</span>
+            <span class="legend-item"><span class="legend-dot closed"></span> Closed</span>
+        </div>
+
+        <div class="calendar-grid" id="calendar-grid">
+            <!-- filled by JS -->
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section class="section section-alt" id="about">
+    <div class="container">
+        <h2 class="section-title">Why This Exists</h2>
+
+        <div class="about-text" style="margin-bottom: 32px">
+            <p>You know how it goes — you're driving out to the Ring, one bar of signal, and you just want to know
+                <em>is it open?</em> The official site loads slowly, the forum thread is three days old, and by the
+                time anything renders you've already missed the turn.
+            </p>
+            <p>This site was built by a motorsport fan — for exactly that moment. One question, answered instantly.
+                It fetches live data directly from the Nürburgring's own API, caches it aggressively on your device,
+                and serves everything from a CDN close to the Eifel — so it loads fast even when the network around
+                the track is packed with a few thousand other people doing the same thing.</p>
+            <p>It's a free, community-run project with no ads and no tracking. Just the answer.</p>
+            <p class="disclaimer">⚠️ Data comes from the official Nürburgring API. The track can close at any time
+                due to weather or incidents — always confirm before making a long drive.</p>
+        </div>
+
+        <h3
+            style="font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">
+            The Circuit</h3>
+        <div class="about-grid">
+            <div class="about-stat">
+                <div class="stat-value">20.832</div>
+                <div class="stat-label">km — Track Length</div>
+            </div>
+            <div class="about-stat">
+                <div class="stat-value">73</div>
+                <div class="stat-label">Corners</div>
+            </div>
+            <div class="about-stat">
+                <div class="stat-value">300m</div>
+                <div class="stat-label">Elevation Change</div>
+            </div>
+            <div class="about-stat">
+                <div class="stat-value">1927</div>
+                <div class="stat-label">Year Opened</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="container">
+        <p>Data sourced from <a href="https://nuerburgring.de/track_status" target="_blank"
+                rel="noopener">nuerburgring.de</a> · Built with ❤️ for motorsport fans</p>
+    </div>
+</footer>
+
+<!-- defer: script downloads in parallel but executes after HTML is parsed -->
+<script src="app.js" defer></script>
+</body>
+
+</html>

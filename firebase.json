@@ -1,0 +1,55 @@
+{
+    "hosting": {
+        "public": ".",
+        "ignore": [
+            "firebase.json",
+            ".firebaserc",
+            "**/.*",
+            "proxy/**",
+            "DECISIONS.md",
+            "DEPLOY.md"
+        ],
+        "rewrites": [
+            {
+                "source": "/api/track-status",
+                "run": {
+                    "serviceId": "ring-proxy",
+                    "region": "europe-west3"
+                }
+            }
+        ],
+        "headers": [
+            {
+                "source": "**/*.@(js|css)",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "public, max-age=3600, stale-while-revalidate=86400"
+                    }
+                ]
+            },
+            {
+                "source": "sw.js",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-cache"
+                    }
+                ]
+            },
+            {
+                "source": "**",
+                "headers": [
+                    {
+                        "key": "X-Content-Type-Options",
+                        "value": "nosniff"
+                    },
+                    {
+                        "key": "X-Frame-Options",
+                        "value": "DENY"
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "name": "ring-proxy",
+    "version": "1.0.0",
+    "description": "Caching proxy for nuerburgring.de/track_status",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

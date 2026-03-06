@@ -99,6 +99,34 @@ a {
   text-decoration: none;
 }
 
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  line-height: 1;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--muted);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
 /* Larger tap targets on touch devices */
 button,
 a {
@@ -133,24 +161,36 @@ nav a {
 .logo {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.logo-text {
   font-family: var(--font-serif);
   font-weight: 900;
   font-size: 1.15rem;
   letter-spacing: -0.02em;
-  flex-shrink: 0;
+  color: var(--text);
+}
+
+.logo:hover .logo-text {
+  color: var(--accent);
 }
 
 .logo-ring {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
+  font-weight: 900;
+  margin: 0 4px;
+  flex-shrink: 0;
 }
 
 .nav {

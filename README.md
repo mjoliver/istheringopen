@@ -11,7 +11,7 @@ A lightning-fast, mobile-first web app for checking the live status of the Nürb
 
 ## The Problem
 
-You're driving out to the Ring, you have one bar of 3G signal, and you just want to know: *is the track open right now?* The official site is heavy and loads slowly, the forum threads are outdated, and by the time you find the answer, you've missed your turn. 
+When the track is closed for a cleanup, it's a guessing game. You're sat with one bar of signal, trying to predict exactly when the barriers will lift. Get the timing right, and you're first out on a clear track; get it wrong, and you're buried in the access queue, destined for a lap full of traffic and frustration.
 
 ## The Solution
 

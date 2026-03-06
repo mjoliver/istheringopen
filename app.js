@@ -17,7 +17,8 @@ const TTL_OFF_DAY = 24 * 60 * 60 * 1000; // 24 hours — matches deep off-season
 // State
 let trackData = null;
 let currentCalMonth = null;
-let countdownTimer = null;   // setInterval handle for countdown
+let countdownTimer = null;
+let showFullUpcoming = false;
 let pollTimer = null;   // setInterval handle for data refresh
 let webcamTimer = null;   // setInterval handle for webcam refresh
 let webcamsLoaded = false;
@@ -359,7 +360,7 @@ function renderStatus(data, fetchedAt) {
     const statusEl = document.getElementById('last-updated');
     const badgeHtml = isCached
         ? `<span class="cache-badge">📦 Cached</span> ${formatAge(age)}`
-        : `<span class="cache-badge live">🟢 Live</span> ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+        : `<span class="cache-badge live">🟢 Live</span> ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (Browser Time)`;
 
     const infoPopupHtml = `
         <div class="cache-info-container">
@@ -438,13 +439,11 @@ function renderUpcoming() {
     const list = document.getElementById('upcoming-list');
     if (!trackData) return;
 
-    // Discover all track keys dynamically from the API response
     const trackKeys = Object.keys(trackData).filter(k => trackData[k]?.year_schedule);
-
     const t = today();
-    const cutoff = new Date(t); cutoff.setDate(cutoff.getDate() + 30);
+    const daysToShow = showFullUpcoming ? 30 : 10;
+    const cutoff = new Date(t); cutoff.setDate(cutoff.getDate() + daysToShow);
 
-    // Build a date-keyed map: { 'YYYY-MM-DD': [{key, info}, ...] }
     const byDate = {};
     for (const key of trackKeys) {
         const sched = trackData[key].year_schedule || {};
@@ -459,12 +458,17 @@ function renderUpcoming() {
     }
 
     const dates = Object.keys(byDate).sort();
+    const subEl = document.getElementById('upcoming-subtitle');
+    if (subEl) {
+        subEl.textContent = `${dates.length} scheduled ${dates.length === 1 ? 'day' : 'days'} found in the next ${daysToShow} days`;
+    }
+
     if (!dates.length) {
-        list.innerHTML = `<p style="color:var(--muted);padding:40px 0;text-align:center;">No open days in the next 30 days.</p>`;
+        list.innerHTML = `<p style="color:var(--muted);padding:40px 0;text-align:center;">No open days scheduled for the next ${daysToShow} days.</p>`;
         return;
     }
 
-    list.innerHTML = dates.map((d, i) => {
+    const scheduleHtml = dates.map((d, i) => {
         const fd = fmtDate(d);
         const tracks = byDate[d];
         const rows = tracks.map(({ key, info }) => {
@@ -491,6 +495,16 @@ function renderUpcoming() {
         <div class="upcoming-tracks">${rows}</div>
       </div>`;
     }).join('');
+
+    const toggleBtn = !showFullUpcoming ? `
+        <div style="text-align:center; margin-top:24px;">
+            <button class="btn" onclick="showFullUpcoming=true; renderUpcoming()">
+                Show 30 Days
+            </button>
+        </div>
+    ` : '';
+
+    list.innerHTML = scheduleHtml + toggleBtn;
 }
 
 // -------- Calendar (all circuits) --------
@@ -560,11 +574,11 @@ function renderCalendar(year, month) {
     if (legend) {
         const extra = trackKeys.map(k => `
       <span class="legend-item">
-        <span class="legend-dot" style="background:${trackColor(k)}55;border:1px solid ${trackColor(k)}"></span>
+        <span class="legend-dot" style="background:${trackColor(k)};border:1px solid ${trackColor(k)}"></span>
         ${trackLabel(k)}
       </span>`).join('');
         legend.innerHTML = extra +
-            `<span class="legend-item"><span class="legend-dot" style="background:rgba(245,158,11,0.4);border:1px solid var(--amber)"></span>Event</span>` +
+            `<span class="legend-item"><span class="legend-dot" style="background:rgba(245,158,11,1);border:1px solid var(--amber)"></span>Event</span>` +
             `<span class="legend-item"><span class="legend-dot closed"></span>Closed</span>`;
     }
 }

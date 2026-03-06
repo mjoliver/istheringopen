@@ -476,7 +476,9 @@ function renderStatus(data, fetchedAt) {
                 <ul>
                     <li><span>Live Track</span> <span>30s</span></li>
                     <li><span>Scheduled Today</span> <span>10m</span></li>
-                    <li><span>Standby mode</span> <span>Up to 24h</span></li>
+                    <li><span>Opens Tomorrow</span> <span>1h</span></li>
+                    <li><span>Opens This Week</span> <span>12h</span></li>
+                    <li><span>Standby mode</span> <span>24h</span></li>
                 </ul>
             </div>
         </div>

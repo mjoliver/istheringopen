@@ -20,7 +20,7 @@ This app answers that single question instantly.
 - **Instant Load**: The entire app shell is cached locally on your device via a Service Worker.
 - **Trackside Alerts**: Enable the notification bell to get a "pocket ping" the split-second the track flips from Closed to Open. Works in the background while you wait in the car.
 - **Season Calendar Sync**: One-click export of the entire 12-month schedule to your Google/Apple calendar, including opening hours and events.
-- **Adaptive Caching**: Background polling automatically adjusts based on track schedules (every 30s when live, every 10m on active days, and paused completely off-season).
+- **Adaptive Caching**: Background polling adjusts based on the schedule — 30s when live, 10m if opening later today, 1h if tomorrow, 12h if within the week, 24h in deep off-season.
 - **Optimised for congested networks**: ~20 KB total on the wire. Zero external requests — no third-party fonts, trackers, or CDN calls. Single upstream API call shared across all users.
 - **No bloat**: Pure HTML, CSS, and JS. No massive frameworks, no ads, no trackers. *Just the answer.*
 

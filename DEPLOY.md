@@ -33,9 +33,29 @@ Enable the required APIs:
 ```bash
 gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudfunctions.googleapis.com
 
-Create the Docker repository in Artifact Registry:
+Create the Docker repository in Artifact Registry (one-time):
 ```bash
 gcloud artifacts repositories create ring --repository-format=docker --location=europe-west3 --description="Docker repository for Nürburgring proxy"
+```
+
+Grant required IAM roles for GitHub Actions + Firebase Hosting + Cloud Run to work together.
+**These are all required. If any are missing the deploy will fail with 403 errors.**
+
+```bash
+# GitHub Actions service account (replace with yours from: gcloud iam service-accounts list)
+gcloud projects add-iam-policy-binding istheringopen --member="serviceAccount:github-action-1174066943@istheringopen.iam.gserviceaccount.com" --role="roles/run.viewer"
+gcloud projects add-iam-policy-binding istheringopen --member="serviceAccount:github-action-1174066943@istheringopen.iam.gserviceaccount.com" --role="roles/cloudfunctions.viewer"
+gcloud projects add-iam-policy-binding istheringopen --member="serviceAccount:github-action-1174066943@istheringopen.iam.gserviceaccount.com" --role="roles/serviceusage.serviceUsageConsumer"
+
+# Firebase service agent (validates Cloud Run rewrites during deploy finalization)
+gcloud projects add-iam-policy-binding istheringopen --member="serviceAccount:service-765054426821@gcp-sa-firebase.iam.gserviceaccount.com" --role="roles/run.viewer"
+gcloud projects add-iam-policy-binding istheringopen --member="serviceAccount:service-765054426821@gcp-sa-firebase.iam.gserviceaccount.com" --role="roles/cloudfunctions.viewer"
+
+# Firebase Admin SDK SA — this is the one that actually checks Cloud Run rewrite validity
+gcloud projects add-iam-policy-binding istheringopen --member="serviceAccount:firebase-adminsdk-fbsvc@istheringopen.iam.gserviceaccount.com" --role="roles/run.viewer"
+
+# Compute default SA
+gcloud projects add-iam-policy-binding istheringopen --member="serviceAccount:765054426821-compute@developer.gserviceaccount.com" --role="roles/run.viewer"
 ```
 ```
 

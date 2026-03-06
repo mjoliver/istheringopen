@@ -147,8 +147,9 @@ Without a proxy, each user's browser hits `nuerburgring.de/track_status` directl
 - [x] Cloud Run proxy (`proxy/index.js` + `Dockerfile`)
 - [x] Firebase Hosting config (`firebase.json`)
 - [x] `app.js` `API_URL` pointing at Cloud Run proxy (with CORS headers)
-- [x] GitHub Actions CI/CD (auto-deploy on push to `main`)
+- [x] GitHub Actions CI/CD (auto-deploy on push to `main`) — required IAM grants for firebase-adminsdk-fbsvc, gcp-sa-firebase agent, github-action SA, and compute SA (see DEPLOY.md)
 - [x] Domain purchased: `istheringopen.com`
+- [x] `.git/` and `webcam_page.html` excluded from Firebase Hosting deploy
 
 ### Remaining
 - [ ] **Custom domain** — connect `istheringopen.com` in Firebase console, add DNS records in Cloudflare

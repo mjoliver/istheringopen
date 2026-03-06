@@ -12,7 +12,7 @@ const CACHE_KEY = 'nring_track_data';
 // Cache TTLs: much shorter when track is open so status changes surface fast
 const TTL_LIVE = 30 * 1000;         // 30 s  — while a session is running
 const TTL_ACTIVE_DAY = 10 * 60 * 1000;    // 10 min — track opens later today
-const TTL_OFF_DAY = 12 * 60 * 60 * 1000; // 12 hours — off-season / no session today
+const TTL_OFF_DAY = 24 * 60 * 60 * 1000; // 24 hours — matches deep off-season proxy
 
 // State
 let trackData = null;
@@ -41,48 +41,120 @@ function trackColor(key) {
 // -------- Webcams --------
 
 const WEBCAMS = [
-    { label: 'Nordschleife Entry', url: `${API_URL}/webcam/nos` },
-    { label: 'Breidscheid', url: `${API_URL}/webcam/breid` },
-    { label: 'Adenauer Forst', url: `${API_URL}/webcam/ecka` },
-    { label: 'GP Start / Finish', url: 'https://live-image.panomax.com/cams/2527/recent_reduced.jpg' },
+    { id: 'cam-nos', label: 'Nordschleife Entry', url: `${API_URL}/webcam/nos` },
+    { id: 'cam-breid', label: 'Breidscheid', url: `${API_URL}/webcam/breid` },
+    { id: 'cam-ecka', label: 'Adenauer Forst', url: `${API_URL}/webcam/ecka` },
+    { id: 'cam-gp', label: 'GP Track', url: 'https://live-image.panomax.com/cams/2527/recent_reduced.jpg' },
 ];
 
-function toggleWebcams(btn) {
-    const isLoading = btn.classList.toggle('active');
-    const grid = document.getElementById('webcam-grid');
+let activeWebcams = new Set();
 
-    if (!isLoading) {
-        // Unload
+function initWebcams() {
+    const container = document.getElementById('webcam-toggles');
+    if (!container) return;
+
+    let html = WEBCAMS.map(cam => `
+        <button class="tab-btn" id="btn-${cam.id}" onclick="toggleWebcam('${cam.id}')">
+            ${cam.label}
+        </button>
+    `).join('');
+
+    html += `
+        <button class="tab-btn" id="btn-all-cams" onclick="toggleAllWebcams()" style="margin-left: auto; border-color: var(--accent); color: var(--accent); background: transparent;">
+            Show All
+        </button>
+    `;
+    container.innerHTML = html;
+}
+
+function updateWebcamTimer() {
+    if (activeWebcams.size > 0 && !webcamTimer) {
+        webcamTimer = setInterval(renderWebcams, 30_000);
+    } else if (activeWebcams.size === 0 && webcamTimer) {
         clearInterval(webcamTimer);
         webcamTimer = null;
-        grid.innerHTML = '';
-        webcamsLoaded = false;
-        btn.innerHTML = 'Show Cameras';
-        return;
+    }
+}
+
+function toggleWebcam(id) {
+    const btn = document.getElementById(`btn-${id}`);
+    if (!btn) return;
+    const isActive = btn.classList.toggle('active');
+
+    if (isActive) activeWebcams.add(id);
+    else activeWebcams.delete(id);
+
+    const btnAll = document.getElementById('btn-all-cams');
+    if (btnAll) {
+        if (activeWebcams.size === WEBCAMS.length) {
+            btnAll.textContent = 'Hide All';
+            btnAll.classList.add('active');
+            btnAll.style.color = 'var(--accent)';
+            btnAll.style.background = 'transparent';
+        } else {
+            btnAll.textContent = 'Show All';
+            btnAll.classList.remove('active');
+            btnAll.style.color = 'var(--accent)';
+            btnAll.style.background = 'transparent';
+        }
     }
 
-    // Load
-    btn.innerHTML = 'Hide Cameras';
-    webcamsLoaded = true;
+    updateWebcamTimer();
     renderWebcams();
-    webcamTimer = setInterval(renderWebcams, 30_000);
+}
+
+function toggleAllWebcams() {
+    const btnAll = document.getElementById('btn-all-cams');
+    if (!btnAll) return;
+
+    const allActive = activeWebcams.size === WEBCAMS.length;
+
+    if (allActive) {
+        // Hide all
+        activeWebcams.clear();
+        WEBCAMS.forEach(cam => {
+            const btn = document.getElementById(`btn-${cam.id}`);
+            if (btn) btn.classList.remove('active');
+        });
+        btnAll.textContent = 'Show All';
+        btnAll.classList.remove('active');
+        btnAll.style.color = 'var(--accent)';
+        btnAll.style.background = 'transparent';
+    } else {
+        // Show all
+        WEBCAMS.forEach(cam => {
+            activeWebcams.add(cam.id);
+            const btn = document.getElementById(`btn-${cam.id}`);
+            if (btn) btn.classList.add('active');
+        });
+        btnAll.textContent = 'Hide All';
+        btnAll.classList.add('active');
+        btnAll.style.color = 'var(--accent)';
+        btnAll.style.background = 'transparent';
+    }
+
+    updateWebcamTimer();
+    renderWebcams();
 }
 
 function renderWebcams() {
     const grid = document.getElementById('webcam-grid');
+    if (!grid) return;
+
+    if (activeWebcams.size === 0) {
+        grid.innerHTML = '';
+        return;
+    }
+
     const ts = Date.now(); // cache-bust so browsers re-fetch
-    grid.innerHTML = WEBCAMS.map(cam => `
+    const activeCams = WEBCAMS.filter(cam => activeWebcams.has(cam.id));
+    grid.innerHTML = activeCams.map(cam => `
     <div class="webcam-card">
-      <img
-        src="${cam.url}?t=${ts}"
-        alt="${cam.label}"
-        class="webcam-img"
-        loading="lazy"
-        onerror="this.parentElement.classList.add('cam-error')"
-      >
-      <div class="webcam-label">${cam.label}</div>
+        <div class="webcam-header">${cam.label}</div>
+        <img src="${cam.url}?t=${ts}" class="webcam-img" alt="${cam.label}" loading="lazy" 
+             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect width=%22400%22 height=%22300%22 fill=%22%23222%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23666%22 font-family=%22sans-serif%22 font-size=%2214%22%3EUnavailable%3C/text%3E%3C/svg%3E'">
     </div>
-  `).join('');
+    `).join('');
 }
 
 // -------- Cache --------
@@ -195,28 +267,82 @@ function tickCountdowns() {
 
 // -------- Polling --------
 
+let nextPollTime = null;
+let uiTimer = null;
+
+function updateRefreshUI() {
+    const el = document.getElementById('refresh-text');
+    if (!el) return;
+
+    if (!nextPollTime) {
+        el.textContent = ' • Track Closed Today';
+        return;
+    }
+
+    const diff = Math.max(0, Math.ceil((nextPollTime - Date.now()) / 1000));
+    if (diff === 0) {
+        el.textContent = ' • Refreshing...';
+        return;
+    }
+
+    let timeStr = '';
+    if (diff > 3600) {
+        timeStr = `${Math.ceil(diff / 3600)}h`;
+    } else if (diff > 60) {
+        timeStr = `${Math.ceil(diff / 60)}m`;
+    } else {
+        timeStr = `${diff}s`;
+    }
+
+    const t = today();
+    const scheduledToday = trackData && (getDayData(trackData.nordschleife, t)?.opened || getDayData(trackData.ring_kartbahn, t)?.opened);
+    const isLiveNow = isLive(trackData);
+
+    if (isLiveNow) {
+        el.textContent = ` • Updating in ${timeStr} (Live frequency)`;
+    } else if (scheduledToday) {
+        el.textContent = ` • Updating in ${timeStr} (Scheduled today)`;
+    } else {
+        el.textContent = ` • Updating in ${timeStr} (Standby mode)`;
+    }
+}
+
+function toggleCacheInfo() {
+    const popup = document.getElementById('cache-info-popup');
+    if (popup) popup.classList.toggle('active');
+}
+
 function isLive(data) {
     if (!data) return false;
     return !!(data.nordschleife?.opened || data.ring_kartbahn?.opened);
 }
 
 /** Schedule the next data poll based on whether any track is currently open. */
-function schedulePoll() {
+function schedulePoll(fetchedAt = Date.now()) {
     clearInterval(pollTimer);
+    clearInterval(uiTimer);
+    nextPollTime = null;
     if (!trackData) return;
 
     const live = isLive(trackData);
     const t = today();
     const scheduledToday = getDayData(trackData.nordschleife, t)?.opened || getDayData(trackData.ring_kartbahn, t)?.opened;
 
-    // When live: poll every 30s to catch live closures fast
-    // When active day: poll every 10 minutes to catch unexpected early openings
-    // When off-day: no background polling needed, relies on tab visibility logic
-    if (live) {
-        pollTimer = setInterval(() => loadData(true), TTL_LIVE);
-    } else if (scheduledToday) {
-        pollTimer = setInterval(() => loadData(true), TTL_ACTIVE_DAY);
-    }
+    let interval = TTL_OFF_DAY;
+    if (live) interval = TTL_LIVE;
+    else if (scheduledToday) interval = TTL_ACTIVE_DAY;
+
+    // Set the expected next poll time relative to when the data was actually fetched
+    nextPollTime = fetchedAt + interval;
+    const msUntilNext = Math.max(0, nextPollTime - Date.now());
+
+    pollTimer = setTimeout(() => {
+        loadData(true);
+    }, msUntilNext);
+
+    // Start UI update loop specifically for this polling lifecycle
+    uiTimer = setInterval(updateRefreshUI, 1000);
+    updateRefreshUI();
 }
 
 // -------- Render --------
@@ -231,9 +357,27 @@ function renderStatus(data, fetchedAt) {
     const age = Date.now() - fetchedAt;
     const isCached = age > 5000;
     const statusEl = document.getElementById('last-updated');
-    statusEl.innerHTML = isCached
+    const badgeHtml = isCached
         ? `<span class="cache-badge">📦 Cached</span> ${formatAge(age)}`
         : `<span class="cache-badge live">🟢 Live</span> ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+
+    const infoPopupHtml = `
+        <div class="cache-info-container">
+            <div class="info-btn" onclick="toggleCacheInfo()">i</div>
+            <div class="cache-info-popup" id="cache-info-popup">
+                <h4>🔋 Smart Data Refresh</h4>
+                <p>To save battery and bandwidth, checking frequency depends on track activity:</p>
+                <ul>
+                    <li><span>Live Track</span> <span>30s</span></li>
+                    <li><span>Scheduled Today</span> <span>10m</span></li>
+                    <li><span>Standby mode</span> <span>Up to 24h</span></li>
+                </ul>
+            </div>
+        </div>
+    `;
+
+    statusEl.innerHTML = `${badgeHtml}<span id="refresh-text" style="opacity:0.8; margin-left:4px;"></span>${infoPopupHtml}`;
+    if (typeof updateRefreshUI === 'function') updateRefreshUI();
 
     renderTrackStatus('nordschleife', data.nordschleife, t);
     renderTrackStatus('gp', data.ring_kartbahn, t);
@@ -452,7 +596,7 @@ function applyData(data, fetchedAt) {
     const d = new Date();
     if (!currentCalMonth) currentCalMonth = new Date(d.getFullYear(), d.getMonth(), 1);
     renderCalendar(currentCalMonth.getFullYear(), currentCalMonth.getMonth());
-    schedulePoll();
+    schedulePoll(fetchedAt);
 }
 
 function showError(hasCached) {
@@ -520,5 +664,16 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') loadData();
 });
 
+// Close cache info on outside click
+document.addEventListener('mousedown', e => {
+    const popup = document.getElementById('cache-info-popup');
+    const infoContainer = document.querySelector('.cache-info-container');
+    if (popup?.classList.contains('active') && !infoContainer?.contains(e.target)) {
+        popup.classList.remove('active');
+    }
+});
+
 // -------- Init --------
 loadData();
+schedulePoll();
+initWebcams();

@@ -13,15 +13,19 @@ const https = require('https');
 const http = require('http');
 
 const UPSTREAM = 'https://nuerburgring.de/track_status';
-const TTL_LIVE = 30 * 1000;
-const TTL_ACTIVE_DAY = 10 * 60 * 1000;
-const TTL_OFF_DAY = 12 * 60 * 60 * 1000;
+
+// Cache TTLs: much shorter when track is open so status changes surface fast
+const TTL_LIVE = 30 * 1000;                // 30 s   — track is currently open
+const TTL_ACTIVE_DAY = 10 * 60 * 1000;     // 10 min — track is closed, but opens later today
+const TTL_OFF_NEAR = 1 * 60 * 60 * 1000;   // 1 hr   — track opens tomorrow
+const TTL_OFF_MID = 12 * 60 * 60 * 1000;   // 12 hrs — track opens within a week
+const TTL_OFF_DEEP = 24 * 60 * 60 * 1000;  // 24 hrs — deep off-season
 const PORT = process.env.PORT || 8080;
 
 // In-memory cache — fine for a single-endpoint proxy.
 // Multiple Cloud Run instances each get their own cache;
 // worst case nuerburgring.de sees (instances × 1) req/TTL, not (users × 1).
-let cache = { data: null, fetchedAt: 0, ttl: TTL_OFF_DAY };
+let cache = { data: null, fetchedAt: 0, ttl: TTL_OFF_DEEP };
 
 function isOpen(data) {
     try {
@@ -60,18 +64,38 @@ function getTtl(data) {
         const todayStr = `${tzDate.getFullYear()}-${String(tzDate.getMonth() + 1).padStart(2, '0')}-${String(tzDate.getDate()).padStart(2, '0')}`;
 
         const tracks = Object.values(data);
-        const scheduledToday = tracks.some(t => {
-            const raw = t?.year_schedule?.[todayStr];
-            if (!raw) return false;
-            return (raw.exclusion || raw).opened === true;
-        });
 
-        if (scheduledToday) return TTL_ACTIVE_DAY;
+        let daysUntilOpen = Infinity;
+
+        // Find the absolute closest opening day across all tracks
+        for (const track of tracks) {
+            const sched = track?.year_schedule;
+            if (!sched) continue;
+
+            for (const [dateStr, raw] of Object.entries(sched)) {
+                if (dateStr < todayStr) continue; // Past
+
+                const isOpened = (raw.exclusion || raw).opened === true;
+                if (isOpened) {
+                    const diffTime = new Date(dateStr) - new Date(todayStr);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays < daysUntilOpen) {
+                        daysUntilOpen = diffDays;
+                    }
+                }
+            }
+        }
+
+        if (daysUntilOpen === 0) return TTL_ACTIVE_DAY;
+        if (daysUntilOpen === 1) return TTL_OFF_NEAR; // 1 hour (Tomorrow)
+        if (daysUntilOpen <= 7) return TTL_OFF_MID;   // 12 hours (Within a week)
+
+        return TTL_OFF_DEEP; // 24 hours (Deep off-season)
+
     } catch (e) {
         // Fallback silently
+        return TTL_OFF_NEAR;
     }
-
-    return TTL_OFF_DAY;
 }
 
 const CORS_HEADERS = {

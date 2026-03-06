@@ -112,18 +112,17 @@
     </div>
 </section>
 
-<!-- Webcam Section (opt-in, no images loaded by default) -->
+<!-- Webcam Section (opt-in per camera) -->
 <section class="section section-alt" id="webcams">
     <div class="container">
         <h2 class="section-title">Live Track Views</h2>
-        <p class="section-subtitle" style="margin-bottom:16px">Official snapshots from 4 cameras around the circuit —
-            good for checking queue length and conditions before heading out. Breidscheid, Adenauer Forst, the
-            Nordschleife entry, and the GP start line.</p>
-        <div class="webcam-controls">
-            <button class="tab-btn" id="webcam-btn" onclick="toggleWebcams(this)">
-                Show Cameras
-            </button>
-            <span class="webcam-warning">⚠️ Loads ~400 KB of images</span>
+        <p class="section-subtitle" style="margin-bottom:16px">Official snapshots around the circuit. Select a camera
+            below to load its live view.</p>
+        <div class="webcam-warning-wrap" style="margin-bottom:16px;">
+            <span class="webcam-warning">⚠️ Loads ~100 KB of data per camera</span>
+        </div>
+        <div class="webcam-controls" id="webcam-toggles">
+            <!-- Toggles injected by JS -->
         </div>
         <div class="webcam-grid" id="webcam-grid">
             <!-- Images injected by JS only after opt-in -->
@@ -185,6 +184,22 @@
                 and serves everything from a CDN close to the Eifel — so it loads fast even when the network around
                 the track is packed with a few thousand other people doing the same thing.</p>
             <p>It's a free, community-run project with no ads and no tracking. Just the answer.</p>
+            <div
+                style="margin-top:20px; padding:16px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border);">
+                <h4
+                    style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px; color:var(--text);">
+                    🔋 Smart Data Refresh</h4>
+                <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">To save battery and bandwidth,
+                    checking frequency depends on track activity:</p>
+                <ul style="font-size:0.85rem; color:var(--muted); padding-left:20px; line-height:1.6;">
+                    <li style="margin-bottom:8px; display:flex; justify-content:space-between; max-width:200px;">
+                        <span>Live Track</span> <strong style="color:var(--green);">30s</strong></li>
+                    <li style="margin-bottom:8px; display:flex; justify-content:space-between; max-width:200px;">
+                        <span>Scheduled Today</span> <strong style="color:var(--amber);">10m</strong></li>
+                    <li style="display:flex; justify-content:space-between; max-width:200px;"><span>Standby mode</span>
+                        <strong style="color:var(--text);">Up to 24h</strong></li>
+                </ul>
+            </div>
             <p class="disclaimer">⚠️ Data comes from the official Nürburgring API. The track can close at any time
                 due to weather or incidents — always confirm before making a long drive.</p>
         </div>

@@ -10,9 +10,11 @@ const PROXY_URL = `https://corsproxy.io/?url=${encodeURIComponent(DIRECT_URL)}`;
 const CACHE_KEY = 'nring_track_data';
 
 // Cache TTLs: much shorter when track is open so status changes surface fast
-const TTL_LIVE = 30 * 1000;         // 30 s  — while a session is running
-const TTL_ACTIVE_DAY = 10 * 60 * 1000;    // 10 min — track opens later today
-const TTL_OFF_DAY = 24 * 60 * 60 * 1000; // 24 hours — matches deep off-season proxy
+const TTL_LIVE = 30 * 1000;              // 30 s  — while a session is running
+const TTL_ACTIVE_DAY = 10 * 60 * 1000;  // 10 min — track opens later today
+const TTL_OFF_NEAR = 60 * 60 * 1000;    // 1 hr  — track opens tomorrow
+const TTL_OFF_MID = 12 * 60 * 60 * 1000;// 12 hr  — track opens within a week
+const TTL_OFF_DAY = 24 * 60 * 60 * 1000;// 24 hrs — deep off-season
 
 // State
 let trackData = null;
@@ -187,7 +189,30 @@ function formatAge(ms) {
 
 // -------- Helpers --------
 
-function today() { return new Date().toISOString().split('T')[0]; }
+// Use Berlin time for date comparisons (track is in Germany)
+function today() {
+    const tzDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Berlin' }));
+    return `${tzDate.getFullYear()}-${String(tzDate.getMonth() + 1).padStart(2, '0')}-${String(tzDate.getDate()).padStart(2, '0')}`;
+}
+
+// Mirror the proxy's TTL logic: find how many days until the next open day
+function getMinDaysUntilOpen(data) {
+    if (!data) return Infinity;
+    const t = today();
+    let min = Infinity;
+    for (const track of Object.values(data)) {
+        const sched = track?.year_schedule;
+        if (!sched) continue;
+        for (const [ds, raw] of Object.entries(sched)) {
+            if (ds <= t) continue;
+            const opened = (raw.exclusion || raw).opened === true;
+            if (!opened) continue;
+            const diff = Math.ceil((new Date(ds) - new Date(t)) / 86400000);
+            if (diff < min) min = diff;
+        }
+    }
+    return min;
+}
 
 function fmtDate(ds) {
     const d = new Date(ds + 'T00:00:00');
@@ -407,6 +432,11 @@ function schedulePoll(fetchedAt = Date.now()) {
     let interval = TTL_OFF_DAY;
     if (live) interval = TTL_LIVE;
     else if (scheduledToday) interval = TTL_ACTIVE_DAY;
+    else {
+        const days = getMinDaysUntilOpen(trackData);
+        if (days === 1) interval = TTL_OFF_NEAR;
+        else if (days <= 7) interval = TTL_OFF_MID;
+    }
 
     // Set the expected next poll time relative to when the data was actually fetched
     nextPollTime = fetchedAt + interval;

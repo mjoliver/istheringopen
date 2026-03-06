@@ -31,7 +31,12 @@ https://www.docker.com/products/docker-desktop
 
 Enable the required APIs:
 ```bash
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudfunctions.googleapis.com
+
+Create the Docker repository in Artifact Registry:
+```bash
+gcloud artifacts repositories create ring --repository-format=docker --location=europe-west3 --description="Docker repository for Nürburgring proxy"
+```
 ```
 
 ---
@@ -48,16 +53,7 @@ cd proxy
 gcloud builds submit --tag europe-west3-docker.pkg.dev/YOUR_PROJECT_ID/ring/ring-proxy
 
 # Deploy to Cloud Run (Frankfurt — closest to the Nürburgring)
-gcloud run deploy ring-proxy \
-  --image europe-west3-docker.pkg.dev/YOUR_PROJECT_ID/ring/ring-proxy \
-  --region europe-west3 \
-  --platform managed \
-  --allow-unauthenticated \
-  --memory 128Mi \
-  --cpu 1 \
-  --min-instances 0 \
-  --max-instances 10 \
-  --port 8080
+gcloud run deploy ring-proxy --image europe-west3-docker.pkg.dev/YOUR_PROJECT_ID/ring/ring-proxy --region europe-west3 --platform managed --allow-unauthenticated --memory 128Mi --cpu 1 --min-instances 0 --max-instances 10 --port 8080
 ```
 
 > **Note the Cloud Run URL** — it will look like  
@@ -122,7 +118,10 @@ This means `https://istheringopen.com/api/track-status` routes to your Cloud Run
 firebase deploy --only hosting
 ```
 
-Your site is now live at `https://YOUR_PROJECT_ID.web.app`.
+> [!IMPORTANT]
+> **Troubleshooting 403 Errors:** If deployment fails with a `Permission denied` error regarding `run.services.get`, ensure that:
+> 1. You have already deployed the Cloud Run proxy (Step 2). Firebase validates this during hosting deploy.
+> 2. The Service Account used by GitHub Actions has the **Cloud Run Viewer** role in IAM.
 
 ---
 

@@ -1,0 +1,8 @@
+{
+    "name": "istheringopen",
+    "private": true,
+    "description": "istheringopen.com (?) - Nürburgring Live Status",
+    "scripts": {
+        "build": "echo 'Skipping build for static site'"
+    }
+}

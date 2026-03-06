@@ -6,9 +6,13 @@
             ".firebaserc",
             "**/.*",
             ".git/**",
+            ".github/**",
             "proxy/**",
+            "docs/**",
             "DECISIONS.md",
             "DEPLOY.md",
+            "README.md",
+            "package.json",
             "webcam_page.html"
         ],
         "rewrites": [

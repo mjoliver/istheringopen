@@ -12,8 +12,7 @@
 const https = require('https');
 const http = require('http');
 
-const DIRECT = 'https://nuerburgring.de/track_status';
-const UPSTREAM = `https://corsproxy.io/?url=${encodeURIComponent(DIRECT)}`;
+const UPSTREAM = 'https://nuerburgring.de/track_status';
 const TTL_OPEN = 30 * 1000;
 const TTL_CLOSED = 20 * 60 * 1000;
 const PORT = process.env.PORT || 8080;

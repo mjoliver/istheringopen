@@ -6,7 +6,7 @@
 A lightning-fast, mobile-first web app for checking the live status of the Nürburgring Nordschleife and Grand Prix Circuit. Built specifically to work flawlessly on unreliable, congested trackside mobile networks in the Eifel.
 
 <p align="center">
-  <img src="docs/preview.png" alt="Is The Ring Open? - App Walkthrough" width="350">
+  <img src="docs/preview.png" alt="istheringopen.com (?) - App Walkthrough" width="100%">
 </p>
 
 ## The Problem

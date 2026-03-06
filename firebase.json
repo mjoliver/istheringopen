@@ -5,6 +5,7 @@
             "firebase.json",
             ".firebaserc",
             "**/.*",
+            ".git/**",
             "proxy/**",
             "DECISIONS.md",
             "DEPLOY.md",

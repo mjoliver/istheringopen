@@ -91,6 +91,34 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200); res.end('ok'); return;
     }
 
+    // Image proxy for S3 webcams (Requires Referer: https://nuerburgring.de/)
+    if (req.url.startsWith('/webcam/')) {
+        const camMap = {
+            'nos': 'https://s3nbrg01webcam.s3.eu-central-1.amazonaws.com/NOS/snap_c1.jpg',
+            'breid': 'https://s3nbrg01webcam.s3.eu-central-1.amazonaws.com/Breid/snap_c1.jpg',
+            'ecka': 'https://s3nbrg01webcam.s3.eu-central-1.amazonaws.com/EckA/snap.jpg'
+        };
+        const camId = req.url.split('/')[2];
+        const targetUrl = camMap[camId];
+
+        if (!targetUrl) {
+            res.writeHead(404); res.end('Not found'); return;
+        }
+
+        https.get(targetUrl, { headers: { 'Referer': 'https://nuerburgring.de/' } }, proxyRes => {
+            res.writeHead(proxyRes.statusCode || 200, {
+                ...CORS_HEADERS,
+                'Content-Type': proxyRes.headers['content-type'] || 'image/jpeg',
+                'Cache-Control': 'public, max-age=60' // Cache images for 60s
+            });
+            proxyRes.pipe(res);
+        }).on('error', err => {
+            console.error('Image proxy failed:', err.message);
+            res.writeHead(500); res.end('Error proxying image');
+        });
+        return;
+    }
+
     // Only serve the status endpoint
     if (req.url !== '/' && req.url !== '/track-status') {
         res.writeHead(404); res.end('Not found'); return;

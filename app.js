@@ -41,10 +41,10 @@ function trackColor(key) {
 // -------- Webcams --------
 
 const WEBCAMS = [
-    { label: 'Nordschleife Entry', url: 'https://nuerburgring.de/assets/webcam_c1-88c93b1eb07593c6be67a421fe8290efef3fbcdbbade0c55d04ca03d6d028ce3.jpg' },
-    { label: 'Breidscheid', url: 'https://nuerburgring.de/assets/webcam_c1-88c93b1eb07593c6be67a421fe8290efef3fbcdbbade0c55d04ca03d6d028ce3.jpg' },
-    { label: 'Adenauer Forst', url: 'https://nuerburgring.de/assets/webcam-4ca18a7a5c88b7dbf16ba1f3d6ce74bdac9ec4ef9375ca7ce25f4cc068c2eeff.jpg' },
-    { label: 'GP Start / Finish', url: 'https://nuerburgring.de/assets/webcam-4ca18a7a5c88b7dbf16ba1f3d6ce74bdac9ec4ef9375ca7ce25f4cc068c2eeff.jpg' },
+    { label: 'Nordschleife Entry', url: `${API_URL}/webcam/nos` },
+    { label: 'Breidscheid', url: `${API_URL}/webcam/breid` },
+    { label: 'Adenauer Forst', url: `${API_URL}/webcam/ecka` },
+    { label: 'GP Start / Finish', url: 'https://live-image.panomax.com/cams/2527/recent_reduced.jpg' },
 ];
 
 function toggleWebcams(btn) {

@@ -902,6 +902,5 @@ document.addEventListener('mousedown', e => {
 
 // -------- Init --------
 loadData();
-schedulePoll();
 initWebcams();
 updateNotifyUI();

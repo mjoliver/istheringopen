@@ -335,7 +335,10 @@ function updateRefreshUI() {
     else if (scheduledToday) mode = 'Scheduled today';
     else mode = 'Standby';
 
-    el.textContent = `Data ${ageStr} \u2022 Next check in ${refreshStr} (${mode})`;
+    const isMobile = window.innerWidth < 480;
+    const nextLabel = isMobile ? 'Next' : 'Next check in';
+
+    el.textContent = `Data ${ageStr} \u2022 ${nextLabel} ${refreshStr} (${mode})`;
 }
 
 // -------- Trackside Alerts (Notifications) --------

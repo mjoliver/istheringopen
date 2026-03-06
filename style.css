@@ -1101,6 +1101,13 @@ nav a {
   .last-updated {
     margin-left: auto;
     font-size: 0.65rem;
+    white-space: normal;
+    text-align: right;
+    line-height: 1.2;
+  }
+
+  .logo-text {
+    font-size: 1rem;
   }
 
   /* show in hero-sub instead */

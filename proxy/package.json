@@ -4,9 +4,11 @@
     "description": "Caching proxy for nuerburgring.de/track_status",
     "main": "index.js",
     "scripts": {
-        "start": "node index.js"
+        "start": "node index.js",
+        "test": "node test_ttl.js"
     },
     "engines": {
         "node": ">=20"
-    }
+    },
+    "dependencies": {}
 }

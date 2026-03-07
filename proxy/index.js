@@ -88,9 +88,12 @@ function getTtl(data) {
                     daysUntilOpen = diffDays;
                 }
 
-                // If scheduled for today, check exact hours to see if we are close to opening
-                if (diffDays === 0 && raw.periods) {
-                    for (const p of raw.periods) {
+                // If scheduled for today, check exact hours to see if we are close to opening.
+                // NOTE: Must unwrap `exclusion` the same way isOpened does above, because most
+                // dates store their data under raw.exclusion rather than directly on raw.
+                const todayEntry = raw.exclusion || raw;
+                if (diffDays === 0 && todayEntry.periods) {
+                    for (const p of todayEntry.periods) {
                         const [sh, sm] = p.start.split(':').map(Number);
                         const startDt = new Date(y, m - 1, d, sh, sm, 0);
 

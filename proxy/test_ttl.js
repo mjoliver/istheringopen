@@ -1,10 +1,12 @@
 /**
  * Tests for the TTL caching logic in index.js.
  *
- * Key bug fixed: schedule entries are wrapped in an `exclusion` object in the
- * Nürburgring API response. The 1-hour fast-poll window was reading `raw.periods`
- * directly instead of `(raw.exclusion || raw).periods`, so msUntilNextOpen was
- * always Infinity and the 30s TTL was never activated before opening.
+ * Bugs fixed:
+ * 1. schedule entries are wrapped in an `exclusion` object — raw.periods was read
+ *    directly, so msUntilNextOpen was always Infinity and the 30s pre-open
+ *    window never activated.
+ * 2. Being inside a scheduled session window while opened=false (crash/red-flag
+ *    closure) now correctly returns TTL_LIVE instead of TTL_ACTIVE_DAY.
  *
  * Run: node test_ttl.js
  */
@@ -60,7 +62,14 @@ function getTtl(data, nowOverride) {
                 if (diffDays === 0 && todayEntry.periods) {
                     for (const p of todayEntry.periods) {
                         const [sh, sm] = p.start.split(':').map(Number);
+                        const [eh, em] = p.end.split(':').map(Number);
                         const startDt = new Date(y, m - 1, d, sh, sm, 0);
+                        const endDt = new Date(y, m - 1, d, eh, em, 0);
+
+                        if (berlinNow >= startDt && berlinNow < endDt) {
+                            return TTL_LIVE;
+                        }
+
                         if (startDt > berlinNow) {
                             const msUntil = startDt - berlinNow;
                             if (msUntil < msUntilNextOpen) msUntilNextOpen = msUntil;
@@ -91,18 +100,21 @@ function berlinAt(h, min) {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, min, 0);
 }
 
-/** Build mock track data with today scheduled to open at openHH:openMM. */
-function mockData({ openH = 14, openM = 0, excludeWrapper = true } = {}) {
+/** Build mock track data with today scheduled to open at openH:openM–closeH:closeM. */
+function mockData({ openH = 14, openM = 0, closeH = 20, closeM = 0, excludeWrapper = true } = {}) {
     const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Berlin' }));
     const y = now.getFullYear();
     const mo = now.getMonth() + 1;
     const d = now.getDate();
     const todayStr = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
+    const startStr = `${String(openH).padStart(2, '0')}:${String(openM).padStart(2, '0')}`;
+    const endStr = `${String(closeH).padStart(2, '0')}:${String(closeM).padStart(2, '0')}`;
+
     const dayEntry = {
         opened: true,
         status: 'opened',
-        periods: [{ start: `${String(openH).padStart(2, '0')}:${String(openM).padStart(2, '0')}`, end: '20:00' }],
+        periods: [{ start: startStr, end: endStr }],
         message: { en: null, de: null }
     };
 
@@ -147,10 +159,18 @@ test('Scheduled today, >1h before open → TTL_ACTIVE_DAY (10m)', () => {
     assert.strictEqual(getTtl(data, now), TTL_ACTIVE_DAY);
 });
 
-test('Scheduled today, within 1h of open → TTL_LIVE (30s) [the bug fix]', () => {
-    // 14:00 open, simulated now = 13:30 (30 min before)
-    const data = mockData({ openH: 14 });
+test('Scheduled today, within 1h of open → TTL_LIVE (30s) [exclusion-wrapper bug fix]', () => {
+    // 14:00-20:00 session, now = 13:30 (30 min before opening)
+    const data = mockData({ openH: 14, closeH: 20 });
     const now = berlinAt(13, 30);
+    assert.strictEqual(getTtl(data, now), TTL_LIVE);
+});
+
+test('Inside session window, opened=false → TTL_LIVE (30s) [crash/red-flag closure]', () => {
+    // 08:00-18:30 session, now = 10:00, but opened=false (track stopped due to crash).
+    // Must still poll at 30s so users know the moment it reopens.
+    const data = mockData({ openH: 8, closeH: 18, closeM: 30 });
+    const now = berlinAt(10, 0);
     assert.strictEqual(getTtl(data, now), TTL_LIVE);
 });
 

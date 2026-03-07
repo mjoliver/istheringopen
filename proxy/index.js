@@ -88,15 +88,25 @@ function getTtl(data) {
                     daysUntilOpen = diffDays;
                 }
 
-                // If scheduled for today, check exact hours to see if we are close to opening.
+                // If scheduled for today, check exact hours.
                 // NOTE: Must unwrap `exclusion` the same way isOpened does above, because most
                 // dates store their data under raw.exclusion rather than directly on raw.
                 const todayEntry = raw.exclusion || raw;
                 if (diffDays === 0 && todayEntry.periods) {
                     for (const p of todayEntry.periods) {
                         const [sh, sm] = p.start.split(':').map(Number);
+                        const [eh, em] = p.end.split(':').map(Number);
                         const startDt = new Date(y, m - 1, d, sh, sm, 0);
+                        const endDt = new Date(y, m - 1, d, eh, em, 0);
 
+                        // Inside a scheduled session window but opened=false → temporary closure
+                        // (crash / red flag / incident). Poll at 30s — this is exactly when
+                        // the site matters most: people waiting to know if it'll reopen.
+                        if (berlinNow >= startDt && berlinNow < endDt) {
+                            return TTL_LIVE;
+                        }
+
+                        // Within 1 hour before a session starts → also 30s
                         if (startDt > berlinNow) {
                             const msUntil = startDt - berlinNow;
                             if (msUntil < msUntilNextOpen) msUntilNextOpen = msUntil;

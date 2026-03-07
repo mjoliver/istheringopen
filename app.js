@@ -587,7 +587,7 @@ function renderTrackStatus(id, track, ds) {
         if (isOpen) {
             if (isLiveNow) badgeText = 'Live';
             else if (hasFuture) badgeText = 'Opening Today';
-            else if (hasPassedAll) badgeText = 'Session Ended';
+            else if (hasPassedAll) badgeText = '🏁 Session Over';
         } else {
             if (isRedFlag) badgeText = 'Red Flag';
             else if (hasFuture) badgeText = 'Opening Today';

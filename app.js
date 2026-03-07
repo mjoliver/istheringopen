@@ -899,8 +899,39 @@ async function loadData(force = false) {
             getDayData(cached.data.ring_kartbahn, t)?.opened
         );
         ttl = TTL_OFF_DAY;
+        let msUntilNextOpen = Infinity;
+
+        if (scheduledToday && cached?.data) {
+            const berlinNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+            const y = berlinNow.getFullYear();
+            const m = berlinNow.getMonth() + 1;
+            const d = berlinNow.getDate();
+            const tracks = [cached.data.nordschleife, cached.data.ring_kartbahn];
+
+            for (const track of tracks) {
+                const dayData = getDayData(track, t);
+                if (dayData?.opened && dayData.periods) {
+                    for (const p of dayData.periods) {
+                        const [sh, sm] = p.start.split(':').map(Number);
+                        const startDt = new Date(y, m - 1, d, sh, sm, 0);
+                        if (startDt > berlinNow) {
+                            const msUntil = startDt - berlinNow;
+                            if (msUntil < msUntilNextOpen) msUntilNextOpen = msUntil;
+                        }
+                    }
+                }
+            }
+        }
+
         if (live) ttl = TTL_LIVE;
-        else if (scheduledToday) ttl = TTL_ACTIVE_DAY;
+        else if (scheduledToday) {
+            // Accelerate to 30s polling if opening within 1 hour
+            if (msUntilNextOpen <= 60 * 60 * 1000) {
+                ttl = TTL_LIVE;
+            } else {
+                ttl = TTL_ACTIVE_DAY;
+            }
+        }
         else {
             const days = getMinDaysUntilOpen(cached?.data);
             if (days === 1) ttl = TTL_OFF_NEAR;

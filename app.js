@@ -504,6 +504,7 @@ function renderStatus(data, fetchedAt) {
                 <p>To save battery and bandwidth, checking frequency depends on track activity:</p>
                 <ul>
                     <li><span>Live Track</span> <span>30s</span></li>
+                    <li><span>Opening in < 1h</span> <span>30s</span></li>
                     <li><span>Scheduled Today</span> <span>10m</span></li>
                     <li><span>Opens Tomorrow</span> <span>1h</span></li>
                     <li><span>Opens This Week</span> <span>12h</span></li>

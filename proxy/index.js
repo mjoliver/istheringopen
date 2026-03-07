@@ -60,12 +60,15 @@ function getTtl(data) {
 
     try {
         // Evaluate "today" in Europe/Berlin time
-        const tzDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
-        const todayStr = `${tzDate.getFullYear()}-${String(tzDate.getMonth() + 1).padStart(2, '0')}-${String(tzDate.getDate()).padStart(2, '0')}`;
+        const berlinNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+        const y = berlinNow.getFullYear();
+        const m = berlinNow.getMonth() + 1;
+        const d = berlinNow.getDate();
+        const todayStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
         const tracks = Object.values(data);
-
         let daysUntilOpen = Infinity;
+        let msUntilNextOpen = Infinity;
 
         // Find the absolute closest opening day across all tracks
         for (const track of tracks) {
@@ -76,17 +79,39 @@ function getTtl(data) {
                 if (dateStr < todayStr) continue; // Past
 
                 const isOpened = (raw.exclusion || raw).opened === true;
-                if (isOpened) {
-                    const diffTime = new Date(dateStr) - new Date(todayStr);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    if (diffDays < daysUntilOpen) {
-                        daysUntilOpen = diffDays;
+                if (!isOpened) continue;
+
+                const diffTime = new Date(dateStr) - new Date(todayStr);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays < daysUntilOpen) {
+                    daysUntilOpen = diffDays;
+                }
+
+                // If scheduled for today, check exact hours to see if we are close to opening
+                if (diffDays === 0 && raw.periods) {
+                    for (const p of raw.periods) {
+                        const [sh, sm] = p.start.split(':').map(Number);
+                        const startDt = new Date(y, m - 1, d, sh, sm, 0);
+
+                        if (startDt > berlinNow) {
+                            const msUntil = startDt - berlinNow;
+                            if (msUntil < msUntilNextOpen) msUntilNextOpen = msUntil;
+                        }
                     }
                 }
             }
         }
 
-        if (daysUntilOpen === 0) return TTL_ACTIVE_DAY;
+        if (daysUntilOpen === 0) {
+            // If the track opens in less than 1 hour, switch to fast 30s polling
+            // so we don't miss the exact moment it flips live!
+            if (msUntilNextOpen <= 60 * 60 * 1000) {
+                return TTL_LIVE;
+            }
+            return TTL_ACTIVE_DAY;
+        }
+
         if (daysUntilOpen === 1) return TTL_OFF_NEAR; // 1 hour (Tomorrow)
         if (daysUntilOpen <= 7) return TTL_OFF_MID;   // 12 hours (Within a week)
 

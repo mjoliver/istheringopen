@@ -5,7 +5,7 @@
    - API data: Handled by app.js (localStorage), not SW
    ===================================================== */
 
-const CACHE_NAME = 'nring-v11';
+const CACHE_NAME = 'nring-v12';
 const SHELL = [
     './',
     './index.html',

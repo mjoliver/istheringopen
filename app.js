@@ -252,21 +252,14 @@ function findNextOpen(track, fromDate) {
 // -------- Countdown --------
 
 /** Return seconds remaining until sessionEnd (HH:MM string, today). */
-function secsUntilEnd(endTime) {
-    const now = new Date();
-    const [eh, em] = endTime.split(':').map(Number);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eh, em, 0);
-    return Math.floor((end - now) / 1000);
-}
-
 function fmtCountdown(secs) {
     if (secs <= 0) return null;
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
     const s = secs % 60;
-    if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m remaining`;
-    if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s remaining`;
-    return `${s}s remaining`;
+    if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
+    if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+    return `${s}s`;
 }
 
 function startCountdowns() {
@@ -283,15 +276,42 @@ function tickCountdowns() {
         const info = trackData && getDayData(trackData[trackKey], t);
         if (!info?.opened || !info.periods?.length) { el.textContent = ''; continue; }
 
-        const lastPeriod = info.periods[info.periods.length - 1];
-        const secs = secsUntilEnd(lastPeriod.end);
-        if (secs <= 0) {
-            el.textContent = '🏁 Session ended';
-            // Trigger a refresh — track might have updated its "opened" state
-            loadData(true);
-            return;
+        const berlinNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Berlin' }));
+        const [y, m, d] = t.split('-').map(Number);
+
+        let activePeriod = null;
+        let nextPeriod = null;
+        let isPastAll = true;
+
+        for (const p of info.periods) {
+            const [sh, sm] = p.start.split(':').map(Number);
+            const [eh, em] = p.end.split(':').map(Number);
+
+            const startDt = new Date(y, m - 1, d, sh, sm, 0);
+            const endDt = new Date(y, m - 1, d, eh, em, 0);
+
+            if (berlinNow >= startDt && berlinNow < endDt) {
+                activePeriod = { endDt };
+                isPastAll = false;
+                break;
+            } else if (berlinNow < startDt) {
+                if (!nextPeriod) nextPeriod = { startDt };
+                isPastAll = false;
+            }
         }
-        el.textContent = '⏱ ' + fmtCountdown(secs);
+
+        if (activePeriod) {
+            const secs = Math.floor((activePeriod.endDt - berlinNow) / 1000);
+            el.textContent = '⏱ ' + fmtCountdown(secs) + ' remaining';
+        } else if (nextPeriod) {
+            const secs = Math.floor((nextPeriod.startDt - berlinNow) / 1000);
+            el.textContent = '⏱ Opens in ' + fmtCountdown(secs);
+        } else if (isPastAll) {
+            if (el.textContent !== '🏁 Session ended') {
+                el.textContent = '🏁 Session ended';
+                if (typeof loadData === 'function') loadData(true);
+            }
+        }
     }
 }
 

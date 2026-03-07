@@ -857,7 +857,9 @@ nav a {
 .cal-day-time {
   font-size: 0.6em;
   margin-top: 1px;
-  opacity: 0.8;
+  opacity: 0.9;
+  white-space: nowrap;
+  letter-spacing: -0.02em;
 }
 
 /* Tooltip — desktop only (hover not available on touch) */
@@ -879,20 +881,6 @@ nav a {
   }
 }
 
-/* Cal track dots — one per open circuit */
-.cal-dots {
-  display: flex;
-  gap: 3px;
-  justify-content: center;
-  margin-top: 2px;
-}
-
-.cal-track-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
 
 /* ===== ABOUT ===== */
 .about-grid {

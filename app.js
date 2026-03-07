@@ -548,8 +548,42 @@ function renderTrackStatus(id, track, ds) {
     const card = document.getElementById(`card-${id === 'nordschleife' ? 'nordschleife' : 'gp'}`);
     const isOpen = Boolean(info?.opened);
 
-    badge.className = `status-badge ${isOpen ? 'open' : 'closed'}`;
-    badge.querySelector('.badge-text').textContent = isOpen ? 'Open' : 'Closed';
+    let badgeText = isOpen ? 'Open' : 'Closed';
+    let isLiveNow = false;
+
+    if (isOpen && info.periods?.length && ds === today()) {
+        const berlinNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Berlin' }));
+        const [y, m, d] = ds.split('-').map(Number);
+
+        let hasFuture = false;
+        let hasPassedAll = true;
+
+        for (const p of info.periods) {
+            const [sh, sm] = p.start.split(':').map(Number);
+            const [eh, em] = p.end.split(':').map(Number);
+            const startDt = new Date(y, m - 1, d, sh, sm, 0);
+            const endDt = new Date(y, m - 1, d, eh, em, 0);
+
+            if (berlinNow >= startDt && berlinNow < endDt) {
+                isLiveNow = true;
+                hasPassedAll = false;
+                break;
+            } else if (berlinNow < startDt) {
+                hasFuture = true;
+                hasPassedAll = false;
+            }
+        }
+
+        if (isLiveNow) badgeText = 'Live';
+        else if (hasFuture) badgeText = 'Opening Today';
+        else if (hasPassedAll) badgeText = 'Session Ended';
+    } else if (isOpen) {
+        badgeText = 'Open';
+    }
+
+    badge.className = `status-badge ${isOpen ? 'open' : 'closed'} ${isLiveNow ? 'live' : ''}`;
+    badge.querySelector('.badge-text').textContent = badgeText;
+
     card.classList.remove('is-open', 'is-closed');
     card.classList.add(isOpen ? 'is-open' : 'is-closed');
 
@@ -776,12 +810,18 @@ function renderCalendar(year, month) {
         el.className = cls;
         if (tooltipParts.length) el.setAttribute('data-tooltip', tooltipParts.join(' | '));
 
-        // Build dots — one per open track
-        const dots = [...openTracks, ...eventTracks].map(k =>
-            `<span class="cal-track-dot" style="background:${trackColor(k)}"></span>`
-        ).join('');
+        // Render times directly in the tile
+        const timeBlocks = [...openTracks, ...eventTracks].map(k => {
+            const info = getDayData(trackData[k], ds);
+            const p = info?.periods?.[0];
+            if (!p) return '';
+            // Trim ':00' to save space (e.g. 17:30-19:30 or 8-19)
+            const s = p.start.replace(':00', '');
+            const e = p.end.replace(':00', '');
+            return `<div class="cal-day-time" style="color:${trackColor(k)}">${trackShort(k)}: ${s}-${e}</div>`;
+        }).join('');
 
-        el.innerHTML = `<span class="cal-day-num">${d}</span>${dots ? `<span class="cal-dots">${dots}</span>` : ''}`;
+        el.innerHTML = `<span class="cal-day-num">${d}</span>${timeBlocks}`;
         grid.appendChild(el);
     }
 

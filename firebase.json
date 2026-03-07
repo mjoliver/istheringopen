@@ -24,13 +24,6 @@
                 }
             }
         ],
-        "redirects": [
-            {
-                "source": "**",
-                "destination": "https://istheringopen.com",
-                "type": 301
-            }
-        ],
         "headers": [
             {
                 "source": "**/*.@(js|css)",

@@ -551,8 +551,10 @@ function renderTrackStatus(id, track, ds) {
 
     let badgeText = isOpen ? 'Open' : 'Closed';
     let isLiveNow = false;
+    let isRedFlag = false; // inside session window but opened=false
+    let sessionEndTime = null;
 
-    if (isOpen && info.periods?.length && ds === today()) {
+    if (info?.periods?.length && ds === today()) {
         const berlinNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Berlin' }));
         const [y, m, d] = ds.split('-').map(Number);
 
@@ -566,8 +568,15 @@ function renderTrackStatus(id, track, ds) {
             const endDt = new Date(y, m - 1, d, eh, em, 0);
 
             if (berlinNow >= startDt && berlinNow < endDt) {
-                isLiveNow = true;
                 hasPassedAll = false;
+                sessionEndTime = p.end;
+                if (isOpen) {
+                    isLiveNow = true;
+                } else {
+                    // Inside the session window but API says closed →
+                    // track is temporarily stopped (red flag, incident, etc.)
+                    isRedFlag = true;
+                }
                 break;
             } else if (berlinNow < startDt) {
                 hasFuture = true;
@@ -575,25 +584,35 @@ function renderTrackStatus(id, track, ds) {
             }
         }
 
-        if (isLiveNow) badgeText = 'Live';
-        else if (hasFuture) badgeText = 'Opening Today';
-        else if (hasPassedAll) badgeText = 'Session Ended';
+        if (isOpen) {
+            if (isLiveNow) badgeText = 'Live';
+            else if (hasFuture) badgeText = 'Opening Today';
+            else if (hasPassedAll) badgeText = 'Session Ended';
+        } else {
+            if (isRedFlag) badgeText = 'Red Flag';
+            else if (hasFuture) badgeText = 'Opening Today';
+            // else: plain 'Closed'
+        }
     } else if (isOpen) {
         badgeText = 'Open';
     }
 
-    badge.className = `status-badge ${isOpen ? 'open' : 'closed'} ${isLiveNow ? 'live' : ''}`;
+    badge.className = `status-badge ${isOpen ? 'open' : 'closed'} ${isLiveNow ? 'live' : ''} ${isRedFlag ? 'red-flag' : ''}`;
     badge.querySelector('.badge-text').textContent = badgeText;
 
-    card.classList.remove('is-open', 'is-closed');
+    card.classList.remove('is-open', 'is-closed', 'is-red-flag');
     card.classList.add(isOpen ? 'is-open' : 'is-closed');
+    if (isRedFlag) card.classList.add('is-red-flag');
 
-    if (isOpen && info.periods?.length) {
+    if ((isOpen || isRedFlag) && info.periods?.length) {
         hours.innerHTML = info.periods.map(p => `
       <div class="hours-row">
         <span>${p.start}</span><span class="hours-sep">–</span><span>${p.end}</span>
       </div>
-      <div class="hours-label">Today's open hours &nbsp;·&nbsp; ${calcDuration(p.start, p.end)}</div>
+      <div class="hours-label">${isRedFlag
+                ? `Track temporarily stopped &nbsp;·&nbsp; updating every 30s`
+                : `Today's open hours &nbsp;·&nbsp; ${calcDuration(p.start, p.end)}`
+            }</div>
     `).join('');
     } else {
         hours.innerHTML = `<div class="hours-row" style="color:var(--muted);font-size:1.1rem;font-weight:500;">Not open today</div>`;

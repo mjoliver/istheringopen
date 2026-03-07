@@ -169,7 +169,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Only serve the status endpoint
-    if (req.url !== '/' && req.url !== '/track-status') {
+    if (req.url !== '/' && req.url !== '/track-status' && req.url !== '/api/track-status') {
         res.writeHead(404); res.end('Not found'); return;
     }
 

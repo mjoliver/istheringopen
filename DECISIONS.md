@@ -29,6 +29,27 @@ The `/track_status` JSON endpoint is public and gives us:
 
 ---
 
+## APK reverse-engineering investigation (dead end)
+
+**What we tried:** Downloaded and decompiled three Android APKs — the official Nürburgring app (`nno.apk`), Greenhell, and Pacenotes — to look for undocumented endpoints that expose live flag state, car counts, or lap telemetry.
+
+**Findings:**
+
+| App | Transport | Auth | Result |
+|---|---|---|---|
+| Nürburgring official | WebSocket `wss://nuerburgring.de/cable` (Rails ActionCable) | Requires valid Rails session cookie + CSRF token obtained via login flow | Connection rejected without authenticated session |
+| Pacenotes | Custom WebSocket-based protocol | API key baked into APK; session tokens rotate | Got data structure (`pacenotes_live.json`), but protocol is proprietary and the key/tokens expire |
+| Greenhell | REST + WebSocket hybrid | Requires account + signed JWT | Account-gated; no anonymous access |
+
+**Conclusion:** None of these are viable public data sources. The flag/car-count data is genuinely not publicly accessible:
+- The official Nürburgring WebSocket requires an authenticated browser session — not an API key, so it can't be used server-side without scraping a full login flow (fragile, ToS violation risk).
+- Third-party apps (Pacenotes, Greenhell) use proprietary protocols with rotating credentials. Even if we captured a session, it would expire within hours.
+- There is no undocumented REST endpoint. We checked every path in the APK network calls — they all either 404 anonymously or require auth.
+
+**What this means for the app:** We are permanently limited to `nuerburgring.de/track_status` for our data. The open/closed status and session schedule are the only signals we can reliably surface.
+
+---
+
 ## Caching strategy
 
 **Problem:** The track sits in a valley with notoriously congested mobile data during TF days. Every unnecessary network request makes the app slower for everyone.
@@ -84,20 +105,23 @@ These were deliberate tradeoffs to minimise payload and rendering cost for phone
 
 ## Webcam section design
 
-**Decision:** Completely hidden by default — no images load unless the user taps "Show Cameras".
+**Decision:** Completely hidden by default — no images load unless the user taps a camera button.
 
-**Reason:** At a packed track weekend, the page might be loaded by people on 1-bar 3G. Auto-loading 4 camera images (~400 KB) without consent would be rude. A button with an explicit data warning gives informed consent.
+**Reason:** At a packed track weekend, the page might be loaded by people on 1-bar 3G. Auto-loading camera images without consent would be rude. A button with an explicit data warning gives informed consent.
 
-**Camera sources:** 4 lightweight static JPEG snapshots from the official Nürburgring S3 bucket, updated every 30 seconds. These are the same images the official site uses — no auth required from any HTTP host.
+**Camera sources:** 3 Panomax 360° snapshot JPEGs from the cameras the official Nürburgring site embeds. Each is ~100–150 KB. No auth or Referer required — loaded directly by the browser.
 
-| Camera | URL |
-|---|---|
-| Nordschleife Entry | `s3nbrg01webcam.s3.eu-central-1.amazonaws.com/NOS/snap_c1.jpg` |
-| Breidscheid | `s3nbrg01webcam.s3.eu-central-1.amazonaws.com/Breid/snap_c1.jpg` |
-| Adenauer Forst | `s3nbrg01webcam.s3.eu-central-1.amazonaws.com/EckA/snap.jpg` |
-| GP Start / Finish | `s3nbrg01webcam.s3.eu-central-1.amazonaws.com/Lindner/snap.jpg` |
+| Camera | Panomax ID | URL |
+|---|---|---|
+| TF Entrance | 2527 | `live-image.panomax.com/cams/2527/recent_reduced.jpg` |
+| GP Track | 11220 | `live-image.panomax.com/cams/11220/recent_reduced.jpg` |
+| Eifeldorf / Lindner | 2835 | `live-image.panomax.com/cams/2835/recent_reduced.jpg` |
 
-Images are cache-busted with a timestamp parameter and auto-refresh every 30s while loaded. Unticking the button immediately removes all img elements from the DOM.
+> **Note:** The official Nürburgring site labels cams/2527 as "Webcam Grand-Prix Track" but its own player metadata says "Zufahrt Nordschleife" — it is the TF Entrance. Cams/11220 is the actual GP track overview.
+
+> **Note:** The previous S3 bucket URLs (`s3nbrg01webcam.s3.eu-central-1.amazonaws.com`) returned 403 Forbidden as of March 2026 — the bucket ACL was tightened. BridgeToGantry.com confirmed the same. The S3 proxy route has been removed from the Cloud Run proxy.
+
+Images are cache-busted with a timestamp parameter and auto-refresh every 30s while loaded.
 
 ---
 

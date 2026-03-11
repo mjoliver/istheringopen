@@ -13,6 +13,10 @@ firebase-debug.*.log
 node_modules/
 proxy/node_modules/
 
+# APK investigation artifacts
+*.apk
+*_unpacked/
+
 # OS
 .DS_Store
 Thumbs.db

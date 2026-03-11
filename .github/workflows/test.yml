@@ -21,3 +21,6 @@ jobs:
 
       - name: Run proxy tests
         run: node proxy/test_ttl.js
+
+      - name: Check app.js syntax
+        run: node --check app.js

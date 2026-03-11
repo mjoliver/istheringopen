@@ -1,0 +1,120 @@
+name: Health Check
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'   # Every 4 hours
+  workflow_dispatch:         # Allow manual trigger from Actions tab
+
+jobs:
+  health:
+    name: Endpoint & asset health
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----- Proxy: basic ping -----
+      - name: Proxy health ping
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://ring-proxy-765054426821.europe-west3.run.app/)
+          echo "Proxy ping: $code"
+          [ "$code" = "200" ] || { echo "::error::Proxy returned $code"; exit 1; }
+
+      # ----- Proxy: valid API response -----
+      - name: Proxy API — validate JSON shape
+        run: |
+          body=$(curl -sf \
+            https://ring-proxy-765054426821.europe-west3.run.app/track-status) \
+            || { echo "::error::Proxy API request failed"; exit 1; }
+          echo "$body" | grep -q "nordschleife" \
+            || { echo "::error::API response missing 'nordschleife'"; exit 1; }
+          echo "$body" | grep -q "year_schedule" \
+            || { echo "::error::API response missing 'year_schedule'"; exit 1; }
+          echo "$body" | grep -q "opened" \
+            || { echo "::error::API response missing 'opened'"; exit 1; }
+          echo "API shape OK"
+
+      # ----- Panomax webcam snapshots -----
+      - name: Panomax webcams — HTTP 200 check
+        run: |
+          declare -A CAMS=(
+            ["TF Entrance"]="2527"
+            ["GP Track"]="11220"
+            ["GP Paddock"]="2835"
+          )
+          failed=0
+          for name in "${!CAMS[@]}"; do
+            id="${CAMS[$name]}"
+            url="https://live-image.panomax.com/cams/${id}/recent_reduced.jpg"
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            echo "$name (cam $id): $code"
+            if [ "$code" != "200" ]; then
+              echo "::warning::Camera '$name' (ID $id) returned $code"
+              failed=1
+            fi
+          done
+          # Warn but don't fail the job for cameras — they're third-party
+          # and occasionally go offline briefly; a warning in the log is enough.
+          exit 0
+
+      # ----- Firebase-hosted site -----
+      - name: istheringopen.com — HTTP 200 check
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -L https://istheringopen.com)
+          echo "Site: $code"
+          [ "$code" = "200" ] || { echo "::error::Site returned $code"; exit 1; }
+
+      # ----- Auto-file an issue if the job failed -----
+      - name: File GitHub issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Ensure the label exists (no-op if it already does)
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'health-check',
+                color: 'd93f0b',
+                description: 'Automated health check failure',
+              });
+            } catch (e) {
+              if (!e.message.includes('already_exists')) throw e;
+            }
+
+            const title = `🚨 Health check failed — ${new Date().toUTCString()}`;
+            const body = [
+              '> Automated health check detected a problem.',
+              '',
+              `**Failed run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+              '',
+              'Check the workflow logs above for which endpoint failed.',
+              '',
+              '**Common causes:**',
+              '- Proxy Cloud Run instance crashed or was evicted',
+              '- Nuerburgring API changed its response shape',
+              '- Firebase hosting down',
+              '',
+              '_This issue was opened automatically by the health-check workflow._',
+            ].join('\n');
+
+            // Dedup: don't open a second issue if one's already open
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'health-check',
+            });
+
+            if (existing.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['health-check'],
+              });
+              console.log('Issue created.');
+            } else {
+              console.log(`Skipped — ${existing.length} open health-check issue(s) already exist.`);
+            }

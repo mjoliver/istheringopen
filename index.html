@@ -124,9 +124,13 @@
     <div class="container">
         <h2 class="section-title">Live Track Views</h2>
         <p class="section-subtitle" style="margin-bottom:16px">Official snapshots around the circuit. Select a camera
-            below to load its live view.</p>
+            below to load its live view. &nbsp;·&nbsp;
+            <a href="https://www.nuerburgring.de/info/nuerburgring/webcams" target="_blank" rel="noopener"
+                style="color:var(--accent);text-decoration:underline;text-underline-offset:3px">Full 360° on
+                nuerburgring.de ↗</a>
+        </p>
         <div class="webcam-warning-wrap" style="margin-bottom:16px;">
-            <span class="webcam-warning">⚠️ Loads ~100 KB of data per camera</span>
+            <span class="webcam-warning">⚠️ Each camera loads ~100–150 KB · Images refresh every 30s</span>
         </div>
         <div class="webcam-controls" id="webcam-toggles">
             <!-- Toggles injected by JS -->
@@ -203,28 +207,7 @@
                 <h4
                     style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px; color:var(--text);">
                     🔋 Smart Data Refresh</h4>
-                <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">To save battery and bandwidth,
-                    checking frequency depends on track activity:</p>
-                <ul style="font-size:0.85rem; color:var(--muted); padding-left:20px; line-height:1.6;">
-                    <li style="margin-bottom:6px; display:flex; justify-content:space-between; max-width:220px;">
-                        <span>Live Track</span> <strong style="color:var(--green);">30s</strong>
-                    </li>
-                    <li style="margin-bottom:6px; display:flex; justify-content:space-between; max-width:220px;">
-                        <span>Opening in < 1h</span> <strong style="color:var(--green);">30s</strong>
-                    </li>
-                    <li style="margin-bottom:6px; display:flex; justify-content:space-between; max-width:220px;">
-                        <span>Scheduled Today</span> <strong style="color:var(--amber);">10m</strong>
-                    </li>
-                    <li style="margin-bottom:6px; display:flex; justify-content:space-between; max-width:220px;">
-                        <span>Opens Tomorrow</span> <strong style="color:var(--text);">1h</strong>
-                    </li>
-                    <li style="margin-bottom:6px; display:flex; justify-content:space-between; max-width:220px;">
-                        <span>Opens This Week</span> <strong style="color:var(--text);">12h</strong>
-                    </li>
-                    <li style="display:flex; justify-content:space-between; max-width:220px;">
-                        <span>Deep Off-Season</span> <strong style="color:var(--text);">24h</strong>
-                    </li>
-                </ul>
+                <div id="refresh-table-about" style="font-size:0.85rem; color:var(--muted);"></div>
             </div>
             <div
                 style="margin-top:12px; padding:16px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border);">
@@ -276,10 +259,26 @@
         <div style="text-align:center;">
             <p>Data sourced from <a href="https://nuerburgring.de/track_status" target="_blank"
                     rel="noopener">nuerburgring.de</a> · Built with ❤️ for motorsport fans</p>
-            <p style="margin-top:8px; opacity:0.4; font-size:0.65rem;">v1.3.0</p>
+            <p style="margin-top:10px; opacity:0.7; font-size:0.8rem;">
+                Free &amp; ad-free. If it saved you a wasted trip,
+                <a href="https://buymeacoffee.com/molive" target="_blank" rel="noopener"
+                    style="color:inherit; text-decoration:underline; text-underline-offset:3px;">buy me a coffee ☕</a>
+                &nbsp;·&nbsp;
+                <a href="https://github.com/mjoliver/istheringopen/issues/new" target="_blank" rel="noopener"
+                    style="color:inherit; text-decoration:underline; text-underline-offset:3px;">report a bug 🐛</a>
+            </p>
+            <p style="margin-top:6px; opacity:0.4; font-size:0.65rem;">v1.4.0</p>
         </div>
     </div>
 </footer>
+
+<!-- Calendar day detail bottom sheet -->
+<div class="cal-sheet-backdrop" id="cal-sheet-backdrop" onclick="closeCalDay()"></div>
+<div class="cal-sheet" id="cal-sheet" role="dialog" aria-modal="true" aria-label="Day detail">
+    <div class="cal-sheet-handle"></div>
+    <div class="cal-sheet-content" id="cal-sheet-content"></div>
+    <button class="cal-sheet-close" onclick="closeCalDay()" aria-label="Close">✕</button>
+</div>
 
 <!-- defer: script downloads in parallel but executes after HTML is parsed -->
 <script src="app.js" defer></script>

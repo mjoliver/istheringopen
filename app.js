@@ -48,11 +48,13 @@ function trackColor(key) {
 // -------- Webcams --------
 
 const WEBCAMS = [
-    { id: 'cam-nos', label: 'Nordschleife Entry', url: `${API_URL}/webcam/nos` },
-    { id: 'cam-breid', label: 'Breidscheid', url: `${API_URL}/webcam/breid` },
-    { id: 'cam-ecka', label: 'Adenauer Forst', url: `${API_URL}/webcam/ecka` },
-    { id: 'cam-gp', label: 'GP Track', url: 'https://live-image.panomax.com/cams/2527/recent_reduced.jpg' },
+    { id: 'cam-tf', label: 'TF Entrance', url: 'https://live-image.panomax.com/cams/2527/recent_reduced.jpg' },
+    { id: 'cam-nos', label: 'GP Track', url: 'https://live-image.panomax.com/cams/11220/recent_reduced.jpg' },
+    { id: 'cam-paddock', label: 'GP Paddock', url: 'https://live-image.panomax.com/cams/2835/recent_reduced.jpg' },
 ];
+
+let webcamLastFetched = 0; // timestamp of last renderWebcams() call
+let webcamRefreshTimer = null; // counts down to next fetch for the UI
 
 let activeWebcams = new Set();
 
@@ -77,10 +79,24 @@ function initWebcams() {
 function updateWebcamTimer() {
     if (activeWebcams.size > 0 && !webcamTimer) {
         webcamTimer = setInterval(renderWebcams, 30_000);
+        // Tick the "refreshes in Xs" footer every second
+        webcamRefreshTimer = setInterval(updateWebcamFooters, 1000);
     } else if (activeWebcams.size === 0 && webcamTimer) {
         clearInterval(webcamTimer);
+        clearInterval(webcamRefreshTimer);
         webcamTimer = null;
+        webcamRefreshTimer = null;
     }
+}
+
+function updateWebcamFooters() {
+    if (!webcamLastFetched) return;
+    const age = Math.floor((Date.now() - webcamLastFetched) / 1000);
+    const remaining = Math.max(0, 30 - age);
+    const fetchedStr = new Date(webcamLastFetched).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.querySelectorAll('.webcam-footer').forEach(el => {
+        el.textContent = `Fetched ${fetchedStr} · refreshes in ${remaining}s`;
+    });
 }
 
 function toggleWebcam(id) {
@@ -154,12 +170,15 @@ function renderWebcams() {
     }
 
     const ts = Date.now(); // cache-bust so browsers re-fetch
+    webcamLastFetched = ts;
     const activeCams = WEBCAMS.filter(cam => activeWebcams.has(cam.id));
+    const fetchedStr = new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     grid.innerHTML = activeCams.map(cam => `
     <div class="webcam-card">
         <div class="webcam-header">${cam.label}</div>
-        <img src="${cam.url}?t=${ts}" class="webcam-img" alt="${cam.label}" loading="lazy" 
+        <img src="${cam.url}?t=${ts}" class="webcam-img" alt="${cam.label}" loading="lazy"
              onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect width=%22400%22 height=%22300%22 fill=%22%23222%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23666%22 font-family=%22sans-serif%22 font-size=%2214%22%3EUnavailable%3C/text%3E%3C/svg%3E'">
+        <div class="webcam-footer">Fetched ${fetchedStr} · refreshes in 30s</div>
     </div>
     `).join('');
 }
@@ -395,12 +414,12 @@ async function toggleNotifications() {
     localStorage.setItem('nring_notifications', 'true');
     updateNotifyUI();
 
-    if (notificationsEnabled) {
-        new Notification("🔔 Trackside Alerts Active", {
-            body: "We'll ping your pocket the second the barriers lift!",
-            icon: '/manifest.json' // manifest icons are local
-        });
-    }
+    // Confirmation ping — no icon since our icons are inline SVG data URIs
+    // which browsers won't fetch as notification icons
+    new Notification('🔔 Trackside Alerts Active', {
+        body: 'Keep this tab open. You\'ll get a notification the moment the track flips from Closed to Open.',
+        silent: true,
+    });
 }
 
 function updateNotifyUI() {
@@ -408,6 +427,7 @@ function updateNotifyUI() {
     const label = document.getElementById('notify-label');
     if (!btn || !label) return;
 
+    // Hide on browsers with no support (mainly iOS Safari without PWA install)
     if (!("Notification" in window)) {
         btn.style.display = 'none';
         return;
@@ -415,6 +435,9 @@ function updateNotifyUI() {
 
     btn.style.display = 'inline-flex';
     btn.classList.toggle('active', notificationsEnabled);
+    btn.title = notificationsEnabled
+        ? 'Alerts active — keep this tab open'
+        : 'Get notified when the track opens (tab must stay open)';
     label.textContent = notificationsEnabled ? 'Alerts Active' : 'Notify Me';
     btn.querySelector('.icon').textContent = notificationsEnabled ? '🔕' : '🔔';
 }
@@ -489,6 +512,28 @@ function schedulePoll(fetchedAt = Date.now()) {
 
 // -------- Render --------
 
+// Single source of truth for polling interval rows.
+// Update here and both the ⓘ popup and the About section update automatically.
+const TTL_ROWS = [
+    { label: 'Track live', value: '30s', color: 'var(--green)' },
+    { label: 'Red flag / mid-session stop', value: '30s', color: 'var(--green)' },
+    { label: 'Opening in < 1h', value: '30s', color: 'var(--green)' },
+    { label: 'Scheduled today (> 1h away)', value: '10m', color: 'var(--amber)' },
+    { label: 'Opens tomorrow', value: '1h', color: 'var(--text)' },
+    { label: 'Opens this week', value: '12h', color: 'var(--text)' },
+    { label: 'Deep off-season', value: '24h', color: 'var(--text)' },
+];
+
+function buildRefreshTable() {
+    const rows = TTL_ROWS.map(r =>
+        `<li style="display:flex;justify-content:space-between;max-width:220px;margin-bottom:5px"><span>${r.label}</span><strong style="color:${r.color}">${r.value}</strong></li>`
+    ).join('');
+    return `
+        <p style="margin-bottom:10px">To save battery and bandwidth, checking frequency depends on track activity:</p>
+        <ul style="padding-left:0;line-height:1.6;list-style:none">${rows}</ul>
+    `;
+}
+
 function renderStatus(data, fetchedAt) {
     const t = today();
     const now = new Date();
@@ -501,15 +546,7 @@ function renderStatus(data, fetchedAt) {
             <div class="info-btn" onclick="toggleCacheInfo()">i</div>
             <div class="cache-info-popup" id="cache-info-popup">
                 <h4>🔋 Smart Data Refresh</h4>
-                <p>To save battery and bandwidth, checking frequency depends on track activity:</p>
-                <ul>
-                    <li><span>Live Track</span> <span>30s</span></li>
-                    <li><span>Opening in < 1h</span> <span>30s</span></li>
-                    <li><span>Scheduled Today</span> <span>10m</span></li>
-                    <li><span>Opens Tomorrow</span> <span>1h</span></li>
-                    <li><span>Opens This Week</span> <span>12h</span></li>
-                    <li><span>Standby mode</span> <span>24h</span></li>
-                </ul>
+                ${buildRefreshTable()}
             </div>
         </div>
     `;
@@ -823,12 +860,20 @@ function renderCalendar(year, month) {
         const hasEvent = eventTracks.length > 0;
         let cls = 'cal-day';
         if (!hasAny) cls += ' closed';
-        else if (hasEvent) cls += ' event';
-        else cls += ' open';
+        else if (hasEvent) cls += ' event tappable';
+        else cls += ' open tappable';
         if (ds === t) cls += ' today';
 
         el.className = cls;
         if (tooltipParts.length) el.setAttribute('data-tooltip', tooltipParts.join(' | '));
+
+        // Make open/event days tappable — wire up bottom sheet
+        if (hasAny) {
+            el.setAttribute('role', 'button');
+            el.setAttribute('tabindex', '0');
+            el.onclick = () => showCalDay(ds);
+            el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') showCalDay(ds); };
+        }
 
         // Render times directly in the tile
         const timeBlocks = [...openTracks, ...eventTracks].map(k => {
@@ -862,6 +907,62 @@ function renderCalendar(year, month) {
 function changeMonth(delta) {
     currentCalMonth.setMonth(currentCalMonth.getMonth() + delta);
     renderCalendar(currentCalMonth.getFullYear(), currentCalMonth.getMonth());
+}
+
+// -------- Calendar day bottom sheet --------
+
+function showCalDay(ds) {
+    if (!trackData) return;
+    const fd = fmtDate(ds);
+    const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const dateObj = new Date(ds + 'T00:00:00');
+    const fullDate = `${DAYS_FULL[dateObj.getDay()]}, ${fd.day} ${MONTHS_FULL[dateObj.getMonth()]}`;
+
+    const trackKeys = Object.keys(trackData).filter(k => trackData[k]?.year_schedule);
+    const rows = [];
+
+    for (const key of trackKeys) {
+        const info = getDayData(trackData[key], ds);
+        if (!info?.opened) continue;
+        const color = trackColor(key);
+        const label = trackLabel(key);
+        const msg = info.message?.en || '';
+
+        const periodRows = info.periods.map(p => {
+            const dur = calcDuration(p.start, p.end);
+            return `
+            <div class="cal-sheet-period">
+                <span class="cal-sheet-hours">${p.start}–${p.end}</span>
+                ${dur ? `<span class="cal-sheet-dur">${dur}</span>` : ''}
+            </div>`;
+        }).join('');
+
+        rows.push(`
+        <div class="cal-sheet-track">
+            <div class="cal-sheet-track-header">
+                <span class="cal-sheet-track-badge" style="background:${color}22;color:${color};border-color:${color}44">${label}</span>
+                ${msg ? `<span class="cal-sheet-event-tag">${msg}</span>` : ''}
+            </div>
+            ${periodRows}
+        </div>`);
+    }
+
+    const content = document.getElementById('cal-sheet-content');
+    content.innerHTML = `
+        <div class="cal-sheet-date">${fullDate}</div>
+        ${rows.length ? rows.join('') : '<p style="color:var(--muted);margin-top:8px">No open sessions scheduled.</p>'}
+    `;
+
+    document.getElementById('cal-sheet').classList.add('open');
+    document.getElementById('cal-sheet-backdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCalDay() {
+    document.getElementById('cal-sheet').classList.remove('open');
+    document.getElementById('cal-sheet-backdrop').classList.remove('open');
+    document.body.style.overflow = '';
 }
 
 // -------- Data fetch + cache --------
@@ -1011,7 +1112,16 @@ document.addEventListener('mousedown', e => {
     }
 });
 
+// Close calendar bottom sheet on Escape
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeCalDay();
+});
+
 // -------- Init --------
 loadData();
 initWebcams();
 updateNotifyUI();
+
+// Populate the About section's refresh table from the same source of truth
+const aboutSlot = document.getElementById('refresh-table-about');
+if (aboutSlot) aboutSlot.innerHTML = buildRefreshTable();

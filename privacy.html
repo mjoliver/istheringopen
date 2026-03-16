@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Is The Ring Open?</title>
+  <style>
+    :root {
+      --bg: #0a0a0c;
+      --surface: #141418;
+      --text: #e8e8ec;
+      --muted: #888;
+      --accent: #e30613;
+      --border: #2a2a30;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    header {
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #fff;
+    }
+    .logo-text { font-size: 1.1rem; font-weight: 600; }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .updated {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    section { margin-bottom: 2rem; }
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.8rem;
+    }
+    p { margin-bottom: 0.75rem; color: var(--text); }
+    .highlight {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      font-weight: 500;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="logo" href="/">
+        <div class="logo-icon">?</div>
+        <span class="logo-text">Is The Ring Open?</span>
+      </a>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: March 2026</p>
+    </header>
+
+    <section>
+      <div class="highlight">
+        Short version: this app collects no personal data. Zero.
+      </div>
+      <p>
+        Is The Ring Open? (<a href="https://istheringopen.com">istheringopen.com</a>) is a
+        community-built Progressive Web App and Android app that displays live track status
+        for the Nürburgring Nordschleife and Grand Prix Circuit.
+      </p>
+    </section>
+
+    <section>
+      <h2>Data we collect</h2>
+      <p>
+        <strong>None.</strong> We do not collect, store, or transmit any personal information.
+        There are no user accounts, no sign-ups, no cookies, and no tracking of any kind.
+      </p>
+    </section>
+
+    <section>
+      <h2>Third-party services</h2>
+      <p>
+        The app displays track status data sourced from the official Nürburgring API.
+        Requests to that API are made server-side on our proxy — your device communicates
+        only with <code>istheringopen.com</code>.
+      </p>
+      <p>
+        The app is hosted on Firebase Hosting (Google). Firebase may log standard server
+        access logs (IP address, timestamp, request path) as part of their infrastructure.
+        These logs are not used by us and are subject to
+        <a href="https://policies.google.com/privacy" rel="noopener">Google's Privacy Policy</a>.
+      </p>
+    </section>
+
+    <section>
+      <h2>Push notifications</h2>
+      <p>
+        If you opt into track alerts, your browser generates a push subscription token.
+        This token is stored locally on your device only and used solely to deliver
+        notifications you requested. It is never shared with third parties.
+      </p>
+    </section>
+
+    <section>
+      <h2>Offline data</h2>
+      <p>
+        The app caches data locally in your browser using standard Service Worker APIs.
+        This cached data (track status, schedule) never leaves your device.
+      </p>
+    </section>
+
+    <section>
+      <h2>Children</h2>
+      <p>
+        This app is suitable for all ages. We do not knowingly collect data from anyone,
+        including children under 13.
+      </p>
+    </section>
+
+    <section>
+      <h2>Changes</h2>
+      <p>
+        If this policy ever changes, the "Last updated" date above will be updated.
+        Given the app collects no data, material changes are unlikely.
+      </p>
+    </section>
+
+    <section>
+      <h2>Contact</h2>
+      <p>
+        Questions? Open an issue on
+        <a href="https://github.com/mjoliver/istheringopen" rel="noopener">GitHub</a>
+        or email via the repository contact.
+      </p>
+    </section>
+
+    <footer>
+      <p>&copy; 2026 istheringopen.com &mdash; <a href="/">Back to app</a></p>
+    </footer>
+  </div>
+</body>
+</html>
